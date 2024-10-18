@@ -1,0 +1,62 @@
+basePath: /
+host: localhost:8080
+info:
+  contact: {}
+  description: Application for planning your journey
+  title: Journer Planner
+paths:
+  /auth/signIn:
+    post:
+      consumes:
+      - application/json
+      description: Authorization to the account
+      parameters:
+      - description: your login or email
+        in: query
+        name: option
+        required: true
+        type: string
+      - description: your password
+        in: query
+        name: password
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses: {}
+      summary: SignIn
+      tags:
+      - users
+  /auth/singUp:
+    post:
+      consumes:
+      - application/json
+      description: Create account
+      parameters:
+      - description: your login
+        in: query
+        name: login
+        required: true
+        type: string
+      - description: your password
+        in: query
+        name: password
+        required: true
+        type: string
+      - description: your email
+        in: query
+        name: email
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses: {}
+      summary: SignUp
+      tags:
+      - users
+securityDefinitions:
+  BearerAuth:
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"
