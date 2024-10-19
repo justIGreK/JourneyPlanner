@@ -1,7 +1,6 @@
 package mongorepo
 
 import (
-	logger "JourneyPlanner/pkg/log"
 	"context"
 
 	"os"
@@ -12,19 +11,22 @@ import (
 )
 
 const (
-	dbname         = "journeydb"
-	pollCollection = "polls"
-	taskCollection = "tasks"
-	userCollection = "users"
+	dbname          = "journeydb"
+	pollCollection  = "polls"
+	taskCollection  = "tasks"
+	userCollection  = "users"
+	groupCollection = "groups"
 )
 
 func CreateMongoClient(ctx context.Context) *mongo.Client {
-	logger := logger.GetLogger()
 	dbURI := os.Getenv("MONGO_URI")
 	client, err := mongo.Connect(ctx, options.Client().ApplyURI(dbURI))
 	if err != nil {
-		logger.Fatal("Failed to create MongoDB client: ", zap.Error(err))
+		logs.Fatal("Failed to create MongoDB client: ", zap.Error(err))
 	}
-
+	err = client.Ping(ctx, nil)
+	if err != nil {
+		logs.Fatal("MongoDB is not connected: ", zap.Error(err))
+	}
 	return client
 }

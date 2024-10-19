@@ -5,6 +5,7 @@ import (
 	"context"
 
 	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
@@ -31,6 +32,13 @@ func (r *MongoUserRepo) GetUserByEmail(ctx context.Context, email string) (model
 func (r *MongoUserRepo) GetUserByLogin(ctx context.Context, login string) (models.User, error) {
 	var user models.User
 	filter := bson.M{"login": login}
+	err := r.UserColl.FindOne(ctx, filter).Decode(&user)
+	return user, err
+}
+
+func (r *MongoUserRepo) GetUserByID(ctx context.Context, id primitive.ObjectID) (models.User, error) {
+	var user models.User
+	filter := bson.M{"_id": id}
 	err := r.UserColl.FindOne(ctx, filter).Decode(&user)
 	return user, err
 }

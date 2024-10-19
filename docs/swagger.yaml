@@ -54,6 +54,126 @@ paths:
       summary: SignUp
       tags:
       - users
+  /groups/add:
+    post:
+      consumes:
+      - application/json
+      description: Create new group
+      parameters:
+      - description: name of group
+        in: query
+        name: name
+        required: true
+        type: string
+      - collectionFormat: multi
+        description: by adding logins you will automatically invite this users
+        in: query
+        items:
+          type: string
+        name: invites
+        type: array
+      produces:
+      - application/json
+      responses: {}
+      security:
+      - BearerAuth: []
+      summary: AddGroup
+      tags:
+      - groups
+  /groups/delete:
+    delete:
+      consumes:
+      - application/json
+      description: Delete group by id
+      parameters:
+      - description: id of group
+        in: query
+        name: group_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses: {}
+      security:
+      - BearerAuth: []
+      summary: DeleteGroup
+      tags:
+      - groups
+  /groups/getgroupinfo:
+    get:
+      consumes:
+      - application/json
+      description: Get full info about group you are a member of
+      parameters:
+      - description: id of group
+        in: query
+        name: group_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses: {}
+      security:
+      - BearerAuth: []
+      summary: GetGroupInfo
+      tags:
+      - groups
+  /groups/getlist:
+    get:
+      consumes:
+      - application/json
+      description: Get a list of all the groups you are a member of
+      produces:
+      - application/json
+      responses: {}
+      security:
+      - BearerAuth: []
+      summary: GetGroups
+      tags:
+      - groups
+  /groups/givelead:
+    put:
+      consumes:
+      - application/json
+      description: Give another member of group leader role
+      parameters:
+      - description: member login
+        in: query
+        name: user_login
+        required: true
+        type: string
+      - description: id of group
+        in: query
+        name: group_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses: {}
+      security:
+      - BearerAuth: []
+      summary: GiveLeaderRole
+      tags:
+      - groups
+  /groups/leaveGroup:
+    post:
+      consumes:
+      - application/json
+      description: Leave from group
+      parameters:
+      - description: id of group
+        in: query
+        name: group_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses: {}
+      security:
+      - BearerAuth: []
+      summary: LeaveFromGroup
+      tags:
+      - groups
 securityDefinitions:
   BearerAuth:
     in: header

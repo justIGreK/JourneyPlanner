@@ -11,6 +11,10 @@ import (
 
 	"go.uber.org/zap"
 )
+
+var logs *zap.Logger
+
+
 // @title Journer Planner
 // @description Application for planning your journey
 
@@ -22,21 +26,34 @@ import (
 // @name Authorization
 func main() {
 	config.LoadEnv()
-	logger := logger.GetLogger()
 	ctx := context.Background()
+	logs := logger.GetLogger()
+	setUpProjectLogger(logs)
+	defer logs.Sync()
 	dbclient := mongorepo.CreateMongoClient(ctx)
 	userRepo := mongorepo.NewUserTaskRepo(dbclient)
 	taskRepo := mongorepo.NewUserTaskRepo(dbclient)
 	pollRepo := mongorepo.NewMongoPollRepo(dbclient)
+	groupRepo := mongorepo.NewMongoGroupRepo(dbclient)
 
 	userSrv := service.NewUserSrv(userRepo)
 	taskSrv := service.NewTaskSrv(taskRepo)
 	pollSrv := service.NewPollSrv(pollRepo)
-
-	handler := handler.NewHandler(pollSrv, taskSrv, userSrv)
-	logger.Info("Server is now listening 8080...")
+	groupSrv := service.NewGroupSrv(groupRepo, userRepo)
+	handler := handler.NewHandler(pollSrv, taskSrv, userSrv, groupSrv)
+	logs.Sugar().Info("Server is now listening 8080...")
 	err := http.ListenAndServe(":8080", handler.InitRoutes())
 	if err != nil {
-		logger.Fatal("Server error", zap.Error(err))
+		logs.Sugar().Fatal("Server error", zap.Error(err))
 	}
+}
+
+
+
+
+func setUpProjectLogger(logger *zap.Logger){
+	config.SetLogger(logger)
+	handler.SetLogger(logger)
+	service.SetLogger(logger)
+	mongorepo.SetLogger(logger)
 }
