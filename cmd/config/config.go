@@ -1,16 +1,20 @@
 package config
 
 import (
-	logger "JourneyPlanner/pkg/log"
-
 	"github.com/joho/godotenv"
 	"go.uber.org/zap"
 )
 
+var logs *zap.SugaredLogger
+
+func SetLogger(l *zap.Logger) {
+	logs = l.Sugar()
+}
+
 func LoadEnv() {
-	logger := logger.GetLogger()
 	err := godotenv.Load("../.env")
 	if err != nil {
-		logger.Fatal("Error loading .env file", zap.Error(err))
+		logs.Fatal("Error loading .env file", err)
+
 	}
 }

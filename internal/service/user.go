@@ -2,12 +2,12 @@ package service
 
 import (
 	"JourneyPlanner/internal/models"
-	logger "JourneyPlanner/pkg/log"
 	"context"
 	"errors"
 	"fmt"
 	"regexp"
 
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.uber.org/zap"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -16,6 +16,7 @@ type UserRepository interface {
 	CreateUser(ctx context.Context, user models.User) error
 	GetUserByEmail(ctx context.Context, email string) (models.User, error)
 	GetUserByLogin(ctx context.Context, email string) (models.User, error)
+	GetUserByID(ctx context.Context, id primitive.ObjectID) (models.User, error)
 }
 
 type UserSrv struct {
@@ -27,7 +28,6 @@ func NewUserSrv(userRepo UserRepository) *UserSrv {
 }
 
 func (s *UserSrv) RegisterUser(ctx context.Context, user models.SignUp) error {
-	logger := logger.GetLogger()
 	if !s.isValidEmail(user.Email) {
 		return errors.New("invalid email")
 	}
@@ -37,7 +37,7 @@ func (s *UserSrv) RegisterUser(ctx context.Context, user models.SignUp) error {
 	}
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost)
 	if err != nil {
-		logger.Error("error of generating password", zap.Error(err))
+		logs.Error("error of generating password", zap.Error(err))
 		return errors.New("unfortunately we were unable to process your request, please try again later")
 	}
 	newUser := models.User{
@@ -70,7 +70,7 @@ func (s *UserSrv) LoginUser(ctx context.Context, option, password string) (strin
 		return "", errors.New("invalid credentials")
 	}
 
-	token, err := s.GeneratePasetoToken(user.ID)
+	token, err := s.GeneratePasetoToken(user.Login)
 	if err != nil {
 		return "", fmt.Errorf("error during generating token: %v", err)
 	}

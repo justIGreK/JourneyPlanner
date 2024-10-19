@@ -3,7 +3,6 @@ package handler
 import (
 	"JourneyPlanner/internal/models"
 	"encoding/json"
-	"fmt"
 	"net/http"
 
 	"github.com/go-playground/validator/v10"
@@ -52,7 +51,6 @@ func (h *Handler) SignIn(w http.ResponseWriter, r *http.Request) {
 		Option:   r.URL.Query().Get("option"),
 		Password: r.URL.Query().Get("password"),
 	}
-	fmt.Println(credentials)
 	if err := validate.Struct(credentials); err != nil {
 		http.Error(w, "Validation failed: "+err.Error(), http.StatusBadRequest)
 		return

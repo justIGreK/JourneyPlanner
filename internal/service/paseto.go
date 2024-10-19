@@ -6,20 +6,19 @@ import (
 	"time"
 
 	"github.com/o1egl/paseto"
-	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 var pasetoInstance = paseto.NewV2()
 
 type TokenPayload struct {
-	UserID     primitive.ObjectID `json:"user_id"`
-	Expiration time.Time          `json:"expiration"`
+	UserLogin  string    `json:"user_login"`
+	Expiration time.Time `json:"expiration"`
 }
 
-func (s *UserSrv) GeneratePasetoToken(userID primitive.ObjectID) (string, error) {
+func (s *UserSrv) GeneratePasetoToken(userLogin string) (string, error) {
 	symmetricKey := []byte(os.Getenv("SYMMETRIC_KEY"))
 	payload := TokenPayload{
-		UserID:     userID,
+		UserLogin:  userLogin,
 		Expiration: time.Now().Add(24 * time.Hour),
 	}
 

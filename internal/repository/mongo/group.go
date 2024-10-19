@@ -1,0 +1,121 @@
+package mongorepo
+
+import (
+	"JourneyPlanner/internal/models"
+	"context"
+
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/mongo"
+	"go.uber.org/zap"
+)
+
+var logs *zap.SugaredLogger
+
+func SetLogger(l *zap.Logger) {
+	logs = l.Sugar()
+}
+
+type MongoGroupRepo struct {
+	GroupColl *mongo.Collection
+}
+
+func NewMongoGroupRepo(db *mongo.Client) *MongoGroupRepo {
+	return &MongoGroupRepo{GroupColl: db.Database(dbname).Collection(groupCollection)}
+}
+
+func (r *MongoGroupRepo) CreateGroup(ctx context.Context, group models.Group) error {
+	_, err := r.GroupColl.InsertOne(ctx, group)
+	return err
+}
+
+func (r *MongoGroupRepo) GetGroupList(ctx context.Context, userLogin string) ([]models.Group, error) {
+
+	var groupList []models.Group
+	filter := bson.M{
+		"$and": []bson.M{
+			{"members": userLogin},
+			{"isActive": true},
+		},
+	}
+	cursor, err := r.GroupColl.Find(ctx, filter)
+	if err != nil {
+		return nil, err
+	}
+	err = cursor.All(ctx, &groupList)
+	if err != nil {
+		logs.Error("cursorAll", err)
+		return nil, err
+	}
+	return groupList, nil
+}
+
+func (r *MongoGroupRepo) GetGroupById(ctx context.Context, groupID primitive.ObjectID, userLogin string) (*models.Group, error) {
+	var groupList models.Group
+	filter := bson.M{
+		"$and": []bson.M{
+			{"_id": groupID},
+			{"members": userLogin},
+			{"isActive": true},
+		},
+	}
+	err := r.GroupColl.FindOne(ctx, filter).Decode(&groupList)
+	if err != nil {
+		logs.Errorf("GetGroupById error %v", err)
+		return nil, err
+	}
+	return &groupList, nil
+}
+
+func (r *MongoGroupRepo) ChangeGroupLeader(ctx context.Context, groupID primitive.ObjectID, userLogin string) error {
+	filter := bson.M{
+		"$and": []bson.M{
+			{"_id": groupID},
+			{"isActive": true},
+		},
+	}
+	update := bson.M{"$set": bson.M{"leader_login": userLogin}}
+	_, err := r.GroupColl.UpdateOne(ctx, filter, update)
+	if err != nil {
+		logs.Error("ChangeGroupLeader error", err)
+		return err
+	}
+
+	return nil
+}
+
+func (r *MongoGroupRepo) DeleteGroup(ctx context.Context, groupID primitive.ObjectID) error {
+	filter := bson.M{
+		"$and": []bson.M{
+			{"_id": groupID},
+			{"isActive": true},
+		},
+	}
+	update := bson.M{"$set": bson.M{"isActive": false}}
+	_, err := r.GroupColl.UpdateOne(ctx, filter, update)
+	if err != nil {
+		logs.Error("DeleteGroup error", err)
+		return err
+	}
+	return nil
+}
+func (r *MongoGroupRepo) LeaveGroup(ctx context.Context, groupID primitive.ObjectID, userLogin string) error {
+	filter := bson.M{
+		"$and": []bson.M{
+			{"_id": groupID},
+			{"isActive": true},
+		},
+	}
+	update := bson.M{
+		"$pull": bson.M{
+			"members": userLogin,
+		},
+	}
+	_, err := r.GroupColl.UpdateOne(ctx, filter, update)
+	if err != nil {
+		logs.Error("LeaveGroup error", err)
+		return err
+	}
+
+	return nil
+}
