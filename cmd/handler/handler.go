@@ -2,6 +2,7 @@ package handler
 
 import (
 	"JourneyPlanner/internal/models"
+	"JourneyPlanner/internal/service"
 	"context"
 
 	_ "JourneyPlanner/docs"
@@ -17,6 +18,9 @@ type GroupService interface {
 	LeaveGroup(ctx context.Context, groupID, userLogin string) error
 	DeleteGroup(ctx context.Context, groupID, userLogin string) error
 	GiveLeaderRole(ctx context.Context, groupID, userLogin, memberLogin string) error
+	InviteUser(ctx context.Context, groupID, userLogin string, invitedUser string) error
+	GetInviteList(ctx context.Context, userLogin string) ([]models.InvitationList, error)
+	JoinGroup(ctx context.Context, token string) error
 }
 type PollService interface {
 }
@@ -27,6 +31,7 @@ type TaskService interface {
 type UserService interface {
 	LoginUser(ctx context.Context, option, password string) (string, error)
 	RegisterUser(ctx context.Context, user models.SignUp) error
+	ValidatePasetoToken(tokenString string) (*service.TokenPayload, error)
 }
 
 type Handler struct {
@@ -48,8 +53,8 @@ func NewHandler(pollService PollService, taskService TaskService,
 
 func (h *Handler) InitRoutes() *chi.Mux {
 	r := chi.NewRouter()
-
 	r.Get("/swagger/*", httpSwagger.WrapHandler)
+	r.Get("/join-group", h.JoinGroup)
 	r.Route("/auth", func(r chi.Router) {
 		r.Post("/singUp", h.SignUp)
 		r.Post("/signIn", h.SignIn)
@@ -62,6 +67,8 @@ func (h *Handler) InitRoutes() *chi.Mux {
 		r.Post("/leaveGroup", h.LeaveFromGroup)
 		r.Put("/givelead", h.ChangeLeader)
 		r.Delete("/delete", h.DeleteGroup)
+		r.Post("/invite", h.Invite)
+		r.Get("/invitelist", h.GetInviteList)
 	})
 	return r
 }

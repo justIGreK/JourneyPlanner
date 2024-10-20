@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"JourneyPlanner/internal/service"
 	"context"
 	"net/http"
 	"strings"
@@ -27,7 +26,7 @@ func (h *Handler) AuthMiddleware(next http.Handler) http.Handler {
 			return
 		}
 
-		payload, err := service.ValidatePasetoToken(token)
+		payload, err := h.ValidatePasetoToken(token)
 		if err != nil {
 			http.Error(w, "Invalid or expired token", http.StatusUnauthorized)
 			return

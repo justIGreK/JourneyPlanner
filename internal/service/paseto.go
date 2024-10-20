@@ -26,7 +26,7 @@ func (s *UserSrv) GeneratePasetoToken(userLogin string) (string, error) {
 	return encrypted, err
 }
 
-func ValidatePasetoToken(tokenString string) (*TokenPayload, error) {
+func (s *UserSrv) ValidatePasetoToken(tokenString string) (*TokenPayload, error) {
 	symmetricKey := []byte(os.Getenv("SYMMETRIC_KEY"))
 	var payload TokenPayload
 	var footer string

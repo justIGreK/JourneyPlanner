@@ -67,6 +67,25 @@ func (r *MongoGroupRepo) GetGroupById(ctx context.Context, groupID primitive.Obj
 	return &groupList, nil
 }
 
+func (r *MongoGroupRepo) CheckGroupForExist(ctx context.Context, groupID primitive.ObjectID) ( bool,*models.Group, error) {
+	var group models.Group
+	filter := bson.M{
+		"$and": []bson.M{
+			{"_id": groupID},
+			{"isActive": true},
+		},
+	}
+	err := r.GroupColl.FindOne(ctx, filter).Decode(&group)
+	if err != nil {
+		if err == mongo.ErrNoDocuments{
+			return false, nil,  nil
+		}
+		logs.Errorf("GetGroupById error %v", err)
+		return false, nil, err 
+	}
+	
+	return true, &group, nil
+}
 func (r *MongoGroupRepo) ChangeGroupLeader(ctx context.Context, groupID primitive.ObjectID, userLogin string) error {
 	filter := bson.M{
 		"$and": []bson.M{
@@ -108,6 +127,27 @@ func (r *MongoGroupRepo) LeaveGroup(ctx context.Context, groupID primitive.Objec
 	}
 	update := bson.M{
 		"$pull": bson.M{
+			"members": userLogin,
+		},
+	}
+	_, err := r.GroupColl.UpdateOne(ctx, filter, update)
+	if err != nil {
+		logs.Error("LeaveGroup error", err)
+		return err
+	}
+
+	return nil
+}
+
+func (r *MongoGroupRepo) JoinGroup(ctx context.Context, groupID primitive.ObjectID, userLogin string) error {
+	filter := bson.M{
+		"$and": []bson.M{
+			{"_id": groupID},
+			{"isActive": true},
+		},
+	}
+	update := bson.M{
+		"$push": bson.M{
 			"members": userLogin,
 		},
 	}
