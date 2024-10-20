@@ -16,6 +16,7 @@ const (
 	taskCollection  = "tasks"
 	userCollection  = "users"
 	groupCollection = "groups"
+	inviteCollection = "invites"
 )
 
 func CreateMongoClient(ctx context.Context) *mongo.Client {

@@ -147,3 +147,71 @@ func (h *Handler) DeleteGroup(w http.ResponseWriter, r *http.Request) {
 	}
 	w.WriteHeader(http.StatusAccepted)
 }
+
+// @Summary Invite user
+// @Tags groups
+// @Description Invite user to group
+// @Security BearerAuth
+// @Accept  json
+// @Produce  json
+// @Param group_id query string true "id of group"
+// @Param user_login query string true "invited user"
+// @Router /groups/invite [post]
+func (h *Handler) Invite(w http.ResponseWriter, r *http.Request) {
+	userLogin := r.Context().Value(UserLoginKey).(string)
+	inviteDetails := models.CreateInvite{
+		GroupID: r.URL.Query().Get("group_id"),
+		User:   r.URL.Query().Get("user_login"),
+	}
+	if err := validate.Struct(inviteDetails); err != nil {
+		http.Error(w, "Validation failed: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+	err := h.InviteUser(r.Context(), inviteDetails.GroupID, userLogin, inviteDetails.User)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode("Done")
+}
+
+// @Summary Get invite list 
+// @Tags groups
+// @Description Get your list of invites
+// @Security BearerAuth
+// @Accept  json
+// @Produce  json
+// @Router /groups/invitelist [get]
+func (h *Handler) GetInviteList(w http.ResponseWriter, r *http.Request) {
+	userLogin := r.Context().Value(UserLoginKey).(string)
+	invites, err := h.GroupService.GetInviteList(r.Context(), userLogin)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	if len(invites) == 0{
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode("Your current invitelist is empty")
+		return 
+	}
+	response := map[string]interface{}{
+		"invites": invites,
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(response)
+	
+}
+
+func (h *Handler) JoinGroup(w http.ResponseWriter, r *http.Request) {
+	token := r.URL.Query().Get("token")
+	err := h.GroupService.JoinGroup(r.Context(), token)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode("Done")
+}

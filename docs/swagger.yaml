@@ -155,6 +155,43 @@ paths:
       summary: GiveLeaderRole
       tags:
       - groups
+  /groups/invite:
+    post:
+      consumes:
+      - application/json
+      description: Invite user to group
+      parameters:
+      - description: id of group
+        in: query
+        name: group_id
+        required: true
+        type: string
+      - description: invited user
+        in: query
+        name: user_login
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses: {}
+      security:
+      - BearerAuth: []
+      summary: Invite user
+      tags:
+      - groups
+  /groups/invitelist:
+    get:
+      consumes:
+      - application/json
+      description: Get your list of invites
+      produces:
+      - application/json
+      responses: {}
+      security:
+      - BearerAuth: []
+      summary: Get invite list
+      tags:
+      - groups
   /groups/leaveGroup:
     post:
       consumes:
