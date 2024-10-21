@@ -20,12 +20,17 @@ type GroupService interface {
 	GiveLeaderRole(ctx context.Context, groupID, userLogin, memberLogin string) error
 	InviteUser(ctx context.Context, groupID, userLogin string, invitedUser string) error
 	GetInviteList(ctx context.Context, userLogin string) ([]models.InvitationList, error)
+	DeclineInvite(ctx context.Context, userLogin, inviteID string)error
 	JoinGroup(ctx context.Context, token string) error
 }
 type PollService interface {
 }
 
 type TaskService interface {
+	CreateTask(ctx context.Context, taskInfo models.CreateTask, userLogin string) error
+	GetTaskList(ctx context.Context, groupID, userLogin string) ([]models.Task, error)
+	UpdateTask(ctx context.Context, taskID, userLogin string, task models.CreateTask) error
+	DeleteTask(ctx context.Context, taskID, groupID, userLogin string) error
 }
 
 type UserService interface {
@@ -69,6 +74,14 @@ func (h *Handler) InitRoutes() *chi.Mux {
 		r.Delete("/delete", h.DeleteGroup)
 		r.Post("/invite", h.Invite)
 		r.Get("/invitelist", h.GetInviteList)
+		r.Post("/declineinvite", h.DeclineInvite)
+	})
+	r.Route("/tasks", func(r chi.Router){
+		r.Use(h.AuthMiddleware)
+		r.Post("/add", h.AddTask)
+		r.Get("/getlist", h.GetTasks)
+		r.Delete("/delete", h.DeleteTask)
+		r.Put("/update", h.UpdateTask)
 	})
 	return r
 }

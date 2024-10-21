@@ -80,6 +80,25 @@ paths:
       summary: AddGroup
       tags:
       - groups
+  /groups/declineinvite:
+    post:
+      consumes:
+      - application/json
+      description: Decline invite
+      parameters:
+      - description: Id of invite
+        in: query
+        name: invite_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses: {}
+      security:
+      - BearerAuth: []
+      summary: Decline invite
+      tags:
+      - invites
   /groups/delete:
     delete:
       consumes:
@@ -176,9 +195,9 @@ paths:
       responses: {}
       security:
       - BearerAuth: []
-      summary: Invite user
+      summary: Invite user to group
       tags:
-      - groups
+      - invites
   /groups/invitelist:
     get:
       consumes:
@@ -191,7 +210,7 @@ paths:
       - BearerAuth: []
       summary: Get invite list
       tags:
-      - groups
+      - invites
   /groups/leaveGroup:
     post:
       consumes:
@@ -211,6 +230,141 @@ paths:
       summary: LeaveFromGroup
       tags:
       - groups
+  /tasks/add:
+    post:
+      consumes:
+      - application/json
+      description: Create new task
+      parameters:
+      - description: Id of group
+        in: query
+        name: group_id
+        required: true
+        type: string
+      - description: Task Details
+        in: query
+        name: title
+        required: true
+        type: string
+      - example: "2024-10-21"
+        in: query
+        name: start_date
+        type: string
+      - example: "14:00"
+        in: query
+        name: start_time
+        type: string
+      - example: 0
+        in: query
+        name: days
+        type: integer
+      - example: 2
+        in: query
+        name: hours
+        type: integer
+      - example: 30
+        in: query
+        name: minutes
+        type: integer
+      produces:
+      - application/json
+      responses: {}
+      security:
+      - BearerAuth: []
+      summary: AddTask
+      tags:
+      - Tasks
+  /tasks/delete:
+    delete:
+      consumes:
+      - application/json
+      description: Delete existing task
+      parameters:
+      - description: Id of group
+        in: query
+        name: group_id
+        required: true
+        type: string
+      - description: Id of group
+        in: query
+        name: task_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses: {}
+      security:
+      - BearerAuth: []
+      summary: DeleteTask
+      tags:
+      - Tasks
+  /tasks/getlist:
+    get:
+      consumes:
+      - application/json
+      description: Create new task
+      parameters:
+      - description: Id of group
+        in: query
+        name: group_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses: {}
+      security:
+      - BearerAuth: []
+      summary: GetTasks
+      tags:
+      - Tasks
+  /tasks/update:
+    put:
+      consumes:
+      - application/json
+      description: update existing task
+      parameters:
+      - description: Id of group
+        in: query
+        name: group_id
+        required: true
+        type: string
+      - description: task id
+        in: query
+        name: task_id
+        required: true
+        type: string
+      - description: Task Details
+        in: query
+        name: title
+        type: string
+      - example: "2024-10-21"
+        in: query
+        name: start_date
+        type: string
+      - example: "14:00"
+        in: query
+        name: start_time
+        type: string
+      - example: 0
+        in: query
+        name: days
+        type: integer
+      - example: 2
+        in: query
+        name: hours
+        type: integer
+      - example: 30
+        in: query
+        name: minutes
+        type: integer
+      produces:
+      - application/json
+      responses: {}
+      security:
+      - BearerAuth: []
+      summary: UpdateTask
+      tags:
+      - Tasks
 securityDefinitions:
   BearerAuth:
     in: header

@@ -126,6 +126,36 @@ const docTemplate = `{
                 "responses": {}
             }
         },
+        "/groups/declineinvite": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Decline invite",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "invites"
+                ],
+                "summary": "Decline invite",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Id of invite",
+                        "name": "invite_id",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {}
+            }
+        },
         "/groups/delete": {
             "delete": {
                 "security": [
@@ -259,9 +289,9 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "groups"
+                    "invites"
                 ],
-                "summary": "Invite user",
+                "summary": "Invite user to group",
                 "parameters": [
                     {
                         "type": "string",
@@ -296,7 +326,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "groups"
+                    "invites"
                 ],
                 "summary": "Get invite list",
                 "responses": {}
@@ -327,6 +357,213 @@ const docTemplate = `{
                         "name": "group_id",
                         "in": "query",
                         "required": true
+                    }
+                ],
+                "responses": {}
+            }
+        },
+        "/tasks/add": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Create new task",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Tasks"
+                ],
+                "summary": "AddTask",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Id of group",
+                        "name": "group_id",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Task Details",
+                        "name": "title",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "example": "2024-10-21",
+                        "name": "start_date",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "example": "14:00",
+                        "name": "start_time",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "example": 0,
+                        "name": "days",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "example": 2,
+                        "name": "hours",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "example": 30,
+                        "name": "minutes",
+                        "in": "query"
+                    }
+                ],
+                "responses": {}
+            }
+        },
+        "/tasks/delete": {
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Delete existing task",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Tasks"
+                ],
+                "summary": "DeleteTask",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Id of group",
+                        "name": "group_id",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Id of group",
+                        "name": "task_id",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {}
+            }
+        },
+        "/tasks/getlist": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Create new task",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Tasks"
+                ],
+                "summary": "GetTasks",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Id of group",
+                        "name": "group_id",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {}
+            }
+        },
+        "/tasks/update": {
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "update existing task",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Tasks"
+                ],
+                "summary": "UpdateTask",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Id of group",
+                        "name": "group_id",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "task id",
+                        "name": "task_id",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Task Details",
+                        "name": "title",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "example": "2024-10-21",
+                        "name": "start_date",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "example": "14:00",
+                        "name": "start_time",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "example": 0,
+                        "name": "days",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "example": 2,
+                        "name": "hours",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "example": 30,
+                        "name": "minutes",
+                        "in": "query"
                     }
                 ],
                 "responses": {}

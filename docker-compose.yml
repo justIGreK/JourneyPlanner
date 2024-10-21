@@ -1,0 +1,24 @@
+services:
+  journeyplanner:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      MONGO_URI: "mongodb://mongo:27017/your_db_name"
+      SYMMETRIC_KEY: "hF82JD2ma89kE21shF82JD2ma89kE21s"
+      SECRET_KEY: "SGWRQKRLD"
+    depends_on:
+      - mongo
+
+  mongo:
+    image: mongo:6.0
+    container_name: journey-mongo
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+
+volumes:
+  mongo_data:

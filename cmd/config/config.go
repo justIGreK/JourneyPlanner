@@ -14,7 +14,7 @@ func SetLogger(l *zap.Logger) {
 func LoadEnv() {
 	err := godotenv.Load("../.env")
 	if err != nil {
-		logs.Fatal("Error loading .env file", err)
+		logs.Errorf("Error loading .env file: %v", err)
 
 	}
 }
