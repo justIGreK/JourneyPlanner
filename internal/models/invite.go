@@ -1,6 +1,9 @@
 package models
 
-import "github.com/dgrijalva/jwt-go"
+import (
+	"github.com/dgrijalva/jwt-go"
+	"go.mongodb.org/mongo-driver/bson/primitive"
+)
 
 type CreateInvite struct {
 	GroupID string `json:"group_id" validate:"required"`
@@ -14,6 +17,7 @@ type InvitationToken struct {
 }
 
 type Invitation struct{
+	Invite_ID	primitive.ObjectID `bson:"_id,omitempty"`
 	Receiver string `bson:"receiver"`
 	Sender	string	`bson:"sender"`
 	GroupName string `bson:"group_name"`
@@ -22,6 +26,7 @@ type Invitation struct{
 }
 
 type InvitationList struct{
+	Invite_ID	primitive.ObjectID
 	InvitationText string
 	InvitationLink string
 }

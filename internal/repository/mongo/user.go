@@ -13,7 +13,7 @@ type MongoUserRepo struct {
 	UserColl *mongo.Collection
 }
 
-func NewUserTaskRepo(db *mongo.Client) *MongoUserRepo {
+func NewMongoUserRepo(db *mongo.Client) *MongoUserRepo {
 	return &MongoUserRepo{UserColl: db.Database(dbname).Collection(userCollection)}
 }
 

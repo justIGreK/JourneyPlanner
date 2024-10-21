@@ -148,8 +148,8 @@ func (h *Handler) DeleteGroup(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusAccepted)
 }
 
-// @Summary Invite user
-// @Tags groups
+// @Summary Invite user to group
+// @Tags invites
 // @Description Invite user to group
 // @Security BearerAuth
 // @Accept  json
@@ -178,7 +178,7 @@ func (h *Handler) Invite(w http.ResponseWriter, r *http.Request) {
 }
 
 // @Summary Get invite list 
-// @Tags groups
+// @Tags invites
 // @Description Get your list of invites
 // @Security BearerAuth
 // @Accept  json
@@ -201,6 +201,27 @@ func (h *Handler) GetInviteList(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(response)
+	
+}
+
+// @Summary Decline invite 
+// @Tags invites
+// @Description Decline invite 
+// @Security BearerAuth
+// @Accept  json
+// @Produce  json
+// @Param invite_id query string true "Id of invite"
+// @Router /groups/declineinvite [post]
+func (h *Handler) DeclineInvite(w http.ResponseWriter, r *http.Request) {
+	userLogin := r.Context().Value(UserLoginKey).(string)
+	inviteID := r.URL.Query().Get("invite_id")
+	err := h.GroupService.DeclineInvite(r.Context(), userLogin, inviteID)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode("invite declined")
 	
 }
 

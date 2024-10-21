@@ -5,6 +5,7 @@ import (
 	"context"
 
 	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
@@ -22,7 +23,7 @@ func (r *MongoInviteRepo) AddInvitation(ctx context.Context, inviteCreator, invi
 		Receiver:  invitedUser,
 		GroupName: groupName,
 		Token:     token,
-		IsUsed: false,
+		IsUsed:    false,
 	}
 	_, err := r.InviteColl.InsertOne(ctx, invite)
 	return err
@@ -30,25 +31,25 @@ func (r *MongoInviteRepo) AddInvitation(ctx context.Context, inviteCreator, invi
 
 func (r *MongoInviteRepo) GetInvites(ctx context.Context, userLogin string) ([]models.Invitation, error) {
 	filter := bson.M{
-		"$and":[]bson.M{
+		"$and": []bson.M{
 			{"isUsed": false},
-			{"receiver":userLogin},
+			{"receiver": userLogin},
 		},
 	}
 	cursor, err := r.InviteColl.Find(ctx, filter)
-	if err != nil{
+	if err != nil {
 		logs.Errorf("getinvites Find() error: %v", err)
 	}
 	var invites []models.Invitation
 	cursor.All(ctx, &invites)
-	if err != nil{
+	if err != nil {
 		logs.Errorf("getinvites All() error: %v", err)
 		return nil, err
 	}
 	return invites, nil
 }
 
-func (r *MongoInviteRepo) DeleteInvite(ctx context.Context, token string) error {
+func (r *MongoInviteRepo) DeleteInviteByToken(ctx context.Context, token string) error {
 	filter := bson.M{
 		"$and": []bson.M{
 			{"token": token},
@@ -62,4 +63,21 @@ func (r *MongoInviteRepo) DeleteInvite(ctx context.Context, token string) error 
 		return err
 	}
 	return nil
+}
+
+func (r *MongoInviteRepo) DeleteInviteByID(ctx context.Context, inviteID primitive.ObjectID, userLogin string) (int64, error) {
+	filter := bson.M{
+		"$and": []bson.M{
+			{"_id": inviteID},
+			{"receiver": userLogin},
+			{"isUsed": false},
+		},
+	}
+	update := bson.M{"$set": bson.M{"isUsed": true}}
+	result, err := r.InviteColl.UpdateOne(ctx, filter, update)
+	if err != nil {
+		logs.Error("DeleteInviteByID error", err)
+		return 0, err
+	}
+	return result.ModifiedCount, nil
 }

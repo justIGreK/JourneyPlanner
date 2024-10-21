@@ -25,21 +25,21 @@ var logs *zap.Logger
 // @in header
 // @name Authorization
 func main() {
-	config.LoadEnv()
 	ctx := context.Background()
 	logs := logger.GetLogger()
 	setUpProjectLogger(logs)
+	config.LoadEnv()
 	defer logs.Sync()
 	dbclient := mongorepo.CreateMongoClient(ctx)
-	userRepo := mongorepo.NewUserTaskRepo(dbclient)
-	taskRepo := mongorepo.NewUserTaskRepo(dbclient)
+	userRepo := mongorepo.NewMongoUserRepo(dbclient)
+	taskRepo := mongorepo.NewMongoTaskRepo(dbclient)
 	pollRepo := mongorepo.NewMongoPollRepo(dbclient)
 	groupRepo := mongorepo.NewMongoGroupRepo(dbclient)
 	inviteRepo := mongorepo.NewMongoInviteRepo(dbclient)
 
 	userSrv := service.NewUserSrv(userRepo)
-	taskSrv := service.NewTaskSrv(taskRepo)
 	pollSrv := service.NewPollSrv(pollRepo)
+	taskSrv := service.NewTaskSrv(taskRepo, groupRepo)
 	groupSrv := service.NewGroupSrv(groupRepo, userRepo, inviteRepo)
 	handler := handler.NewHandler(pollSrv, taskSrv, userSrv, groupSrv)
 	logs.Sugar().Info("Server is now listening 8080...")

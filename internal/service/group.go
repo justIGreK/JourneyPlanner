@@ -33,7 +33,8 @@ type GroupRepository interface {
 type InviteRepository interface {
 	AddInvitation(ctx context.Context, inviteCreator, invitedUser, groupName, token string) error
 	GetInvites(ctx context.Context, userLogin string) ([]models.Invitation, error)
-	DeleteInvite(ctx context.Context, token string) error 
+	DeleteInviteByID(ctx context.Context, inviteID primitive.ObjectID, userLogin string) (int64, error)
+	DeleteInviteByToken(ctx context.Context, token string)  error
 }
 
 type GroupSrv struct {
@@ -151,6 +152,9 @@ func (s *GroupSrv) GiveLeaderRole(ctx context.Context, groupID, userLogin, membe
 	if err != nil {
 		return err
 	}
+	if group.LeaderLogin != userLogin {
+		return errors.New("you have no permissions to do this")
+	}
 	var isRealMember bool
 	for _, member := range group.Members {
 		if member == memberLogin {
@@ -160,9 +164,6 @@ func (s *GroupSrv) GiveLeaderRole(ctx context.Context, groupID, userLogin, membe
 	}
 	if !isRealMember {
 		return errors.New("no such member")
-	}
-	if group.LeaderLogin != userLogin {
-		return errors.New("you have no permissions to do this")
 	}
 	err = s.GroupRepository.ChangeGroupLeader(ctx, groupOID, memberLogin)
 	if err != nil {
@@ -278,7 +279,7 @@ func (s *GroupSrv) JoinGroup(ctx context.Context, token string) error {
 		return err
 	}
 
-	err = s.DeleteInvite(ctx, token)
+	err = s.DeleteInviteByToken(ctx, token)
 	if err != nil{
 		logs.Warn(err)
 	}
@@ -319,9 +320,25 @@ func (s *GroupSrv) inviteFormat(invites []models.Invitation) []models.Invitation
 	var inviteList []models.InvitationList
 	for _, invite := range invites {
 		inviteList = append(inviteList, models.InvitationList{
+			Invite_ID: invite.Invite_ID,
 			InvitationText: fmt.Sprintf("User %v invited you to the group %v", invite.Sender, invite.GroupName),
 			InvitationLink: fmt.Sprintf("http://localhost:8080/join-group?token=%s", invite.Token),
 		})
 	}
 	return inviteList
+}
+
+func (s *GroupSrv) DeclineInvite(ctx context.Context, userLogin, inviteID string)error{
+	inviteOID, err := primitive.ObjectIDFromHex(inviteID)
+	if err != nil {
+		return err
+	}
+	modDocs, err := s.InviteRepository.DeleteInviteByID(ctx, inviteOID, userLogin)
+	if err != nil{
+		return err
+	}
+	if modDocs == 0{
+		return errors.New("invite wasn't found")
+	}
+	return nil
 }
