@@ -24,6 +24,10 @@ type GroupService interface {
 	JoinGroup(ctx context.Context, token string) error
 }
 type PollService interface {
+	CreatePoll(ctx context.Context, pollInfo models.CreatePoll, userLogin string) error
+	GetPollList(ctx context.Context, groupID, userLogin string) (*models.PollList, error)
+	DeletePollByID(ctx context.Context, pollID, groupID, userLogin string) error
+	ClosePoll(ctx context.Context, pollID, groupID, userLogin string) error
 }
 
 type TaskService interface {
@@ -40,19 +44,19 @@ type UserService interface {
 }
 
 type Handler struct {
-	PollService
-	TaskService
-	UserService
-	GroupService
+	Poll PollService
+	Task TaskService
+	User UserService
+	Group GroupService
 }
 
 func NewHandler(pollService PollService, taskService TaskService,
 	userService UserService, groupService GroupService) *Handler {
 	return &Handler{
-		PollService:  pollService,
-		TaskService:  taskService,
-		UserService:  userService,
-		GroupService: groupService,
+		Poll:  pollService,
+		Task:  taskService,
+		User:  userService,
+		Group: groupService,
 	}
 }
 
@@ -82,6 +86,13 @@ func (h *Handler) InitRoutes() *chi.Mux {
 		r.Get("/getlist", h.GetTasks)
 		r.Delete("/delete", h.DeleteTask)
 		r.Put("/update", h.UpdateTask)
+	})
+	r.Route("/polls", func(r chi.Router){
+		r.Use(h.AuthMiddleware)
+		r.Post("/add", h.CreatePoll)
+		r.Get("/getlist", h.GetPolls)
+		r.Delete("/delete", h.DeletePoll)
+		r.Put("/close", h.ClosePoll)
 	})
 	return r
 }

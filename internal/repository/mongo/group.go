@@ -51,7 +51,7 @@ func (r *MongoGroupRepo) GetGroupList(ctx context.Context, userLogin string) ([]
 }
 
 func (r *MongoGroupRepo) GetGroupById(ctx context.Context, groupID primitive.ObjectID, userLogin string) (*models.Group, error) {
-	var groupList models.Group
+	var group models.Group
 	filter := bson.M{
 		"$and": []bson.M{
 			{"_id": groupID},
@@ -59,15 +59,15 @@ func (r *MongoGroupRepo) GetGroupById(ctx context.Context, groupID primitive.Obj
 			{"isActive": true},
 		},
 	}
-	err := r.GroupColl.FindOne(ctx, filter).Decode(&groupList)
+	err := r.GroupColl.FindOne(ctx, filter).Decode(&group)
 	if err != nil {
 		logs.Errorf("GetGroupById error %v", err)
 		return nil, err
 	}
-	return &groupList, nil
+	return &group, nil
 }
 
-func (r *MongoGroupRepo) CheckGroupForExist(ctx context.Context, groupID primitive.ObjectID) ( bool,*models.Group, error) {
+func (r *MongoGroupRepo) CheckGroupForExist(ctx context.Context, groupID primitive.ObjectID) (bool, *models.Group, error) {
 	var group models.Group
 	filter := bson.M{
 		"$and": []bson.M{
@@ -77,13 +77,13 @@ func (r *MongoGroupRepo) CheckGroupForExist(ctx context.Context, groupID primiti
 	}
 	err := r.GroupColl.FindOne(ctx, filter).Decode(&group)
 	if err != nil {
-		if err == mongo.ErrNoDocuments{
-			return false, nil,  nil
+		if err == mongo.ErrNoDocuments {
+			return false, nil, nil
 		}
 		logs.Errorf("GetGroupById error %v", err)
-		return false, nil, err 
+		return false, nil, err
 	}
-	
+
 	return true, &group, nil
 }
 func (r *MongoGroupRepo) ChangeGroupLeader(ctx context.Context, groupID primitive.ObjectID, userLogin string) error {

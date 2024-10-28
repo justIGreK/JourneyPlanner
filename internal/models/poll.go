@@ -1,5 +1,33 @@
 package models
 
-type Poll struct{
-	
+import (
+	"time"
+
+	"go.mongodb.org/mongo-driver/bson/primitive"
+)
+
+type Poll struct {
+	ID            primitive.ObjectID `bson:"_id,omitempty"`
+	GroupID       primitive.ObjectID `bson:"group_id"`
+	Creator       string             `bosn:"creator"`
+	Title         string             `bson:"title"`
+	FirstOption   string             `bson:"firstOption"`
+	Votes1        []string           `bson:"votes1"`
+	SecondOption  string             `bson:"secondOption"`
+	Votes2        []string           `bson:"votes2"`
+	EndTime       time.Time          `bson:"endtime"`
+	IsEarlyClosed bool               `bson:"isEarlyClosed"`
+}
+
+type CreatePoll struct {
+	GroupID      string `json:"groupID" validate:"required"`
+	Title        string `json:"title" validate:"required"`
+	FirstOption  string `json:"fstOption" validate:"required"`
+	SecondOption string `json:"sndOption" validate:"required"`
+	Duration     uint64    `json:"duration" validate:"required"`
+}
+
+type PollList struct {
+	OpenPolls   []Poll
+	ClosedPolls []Poll
 }
