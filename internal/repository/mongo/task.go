@@ -3,7 +3,6 @@ package mongorepo
 import (
 	"JourneyPlanner/internal/models"
 	"context"
-	"fmt"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -57,9 +56,9 @@ func (r *MongoTaskRepo) DeleteTask(ctx context.Context, taskID primitive.ObjectI
 	filter := bson.M{"_id": taskID}
 	_, err := r.TaskColl.DeleteOne(ctx, filter)
 	if err != nil {
-		return  err
+		return err
 	}
-	return  nil
+	return nil
 }
 
 func (r *MongoTaskRepo) UpdateTask(ctx context.Context, taskID primitive.ObjectID, newTask models.Task) error {
@@ -79,10 +78,9 @@ func (r *MongoTaskRepo) UpdateTask(ctx context.Context, taskID primitive.ObjectI
 		update["end_time"] = newTask.EndTime
 	}
 	updateQuery := bson.M{
-        "$set": update,
-    }
+		"$set": update,
+	}
 
-	fmt.Println(update)
 	_, err := r.TaskColl.UpdateOne(ctx, filter, updateQuery)
 	if err != nil {
 		return err

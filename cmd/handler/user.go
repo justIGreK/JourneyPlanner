@@ -13,7 +13,6 @@ var validate = validator.New()
 // @Summary SignUp
 // @Tags users
 // @Description Create account
-// @Accept  json
 // @Produce  json
 // @Param login query string true "your login"
 // @Param password query string true "your password"
@@ -29,7 +28,7 @@ func (h *Handler) SignUp(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Validation failed: "+err.Error(), http.StatusBadRequest)
 		return
 	}
-	err := h.RegisterUser(r.Context(), input)
+	err := h.User.RegisterUser(r.Context(), input)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -41,7 +40,6 @@ func (h *Handler) SignUp(w http.ResponseWriter, r *http.Request) {
 // @Summary SignIn
 // @Tags users
 // @Description Authorization to the account
-// @Accept  json
 // @Produce  json
 // @Param option query string true "your login or email"
 // @Param password query string true "your password"
@@ -55,7 +53,7 @@ func (h *Handler) SignIn(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Validation failed: "+err.Error(), http.StatusBadRequest)
 		return
 	}
-	token, err := h.LoginUser(r.Context(), credentials.Option, credentials.Password)
+	token, err := h.User.LoginUser(r.Context(), credentials.Option, credentials.Password)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusUnauthorized)
 		return

@@ -20,11 +20,11 @@ type UserRepository interface {
 }
 
 type UserSrv struct {
-	UserRepository
+	User UserRepository
 }
 
 func NewUserSrv(userRepo UserRepository) *UserSrv {
-	return &UserSrv{UserRepository: userRepo}
+	return &UserSrv{User: userRepo}
 }
 
 func (s *UserSrv) RegisterUser(ctx context.Context, user models.SignUp) error {
@@ -46,7 +46,7 @@ func (s *UserSrv) RegisterUser(ctx context.Context, user models.SignUp) error {
 		Password:     user.Password,
 		PasswordHash: string(hashedPassword),
 	}
-	err = s.CreateUser(ctx, newUser)
+	err = s.User.CreateUser(ctx, newUser)
 	if err != nil {
 		return fmt.Errorf("error during creating user:%v", err)
 	}
@@ -57,9 +57,9 @@ func (s *UserSrv) LoginUser(ctx context.Context, option, password string) (strin
 	var user models.User
 	var err error
 	if s.isValidEmail(option) {
-		user, err = s.GetUserByEmail(ctx, option)
+		user, err = s.User.GetUserByEmail(ctx, option)
 	} else {
-		user, err = s.GetUserByLogin(ctx, option)
+		user, err = s.User.GetUserByLogin(ctx, option)
 	}
 	if err != nil {
 		return "", errors.New("invalid credentials")
@@ -86,10 +86,10 @@ func (s *UserSrv) isValidEmail(email string) bool {
 }
 
 func (s *UserSrv) duplicateCheck(ctx context.Context, user models.SignUp) error {
-	if _, err := s.GetUserByLogin(ctx, user.Login); err == nil {
+	if _, err := s.User.GetUserByLogin(ctx, user.Login); err == nil {
 		return errors.New("this login is already registered")
 	}
-	if _, err := s.GetUserByEmail(ctx, user.Email); err == nil {
+	if _, err := s.User.GetUserByEmail(ctx, user.Email); err == nil {
 		return errors.New("this email is already registered")
 	}
 	return nil

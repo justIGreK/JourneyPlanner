@@ -7,8 +7,6 @@ info:
 paths:
   /auth/signIn:
     post:
-      consumes:
-      - application/json
       description: Authorization to the account
       parameters:
       - description: your login or email
@@ -29,8 +27,6 @@ paths:
       - users
   /auth/singUp:
     post:
-      consumes:
-      - application/json
       description: Create account
       parameters:
       - description: your login
@@ -56,8 +52,6 @@ paths:
       - users
   /groups/add:
     post:
-      consumes:
-      - application/json
       description: Create new group
       parameters:
       - description: name of group
@@ -82,8 +76,6 @@ paths:
       - groups
   /groups/declineinvite:
     post:
-      consumes:
-      - application/json
       description: Decline invite
       parameters:
       - description: Id of invite
@@ -101,8 +93,6 @@ paths:
       - invites
   /groups/delete:
     delete:
-      consumes:
-      - application/json
       description: Delete group by id
       parameters:
       - description: id of group
@@ -120,8 +110,6 @@ paths:
       - groups
   /groups/getgroupinfo:
     get:
-      consumes:
-      - application/json
       description: Get full info about group you are a member of
       parameters:
       - description: id of group
@@ -139,8 +127,6 @@ paths:
       - groups
   /groups/getlist:
     get:
-      consumes:
-      - application/json
       description: Get a list of all the groups you are a member of
       produces:
       - application/json
@@ -152,8 +138,6 @@ paths:
       - groups
   /groups/givelead:
     put:
-      consumes:
-      - application/json
       description: Give another member of group leader role
       parameters:
       - description: member login
@@ -176,8 +160,6 @@ paths:
       - groups
   /groups/invite:
     post:
-      consumes:
-      - application/json
       description: Invite user to group
       parameters:
       - description: id of group
@@ -200,8 +182,6 @@ paths:
       - invites
   /groups/invitelist:
     get:
-      consumes:
-      - application/json
       description: Get your list of invites
       produces:
       - application/json
@@ -213,8 +193,6 @@ paths:
       - invites
   /groups/leaveGroup:
     post:
-      consumes:
-      - application/json
       description: Leave from group
       parameters:
       - description: id of group
@@ -230,10 +208,106 @@ paths:
       summary: LeaveFromGroup
       tags:
       - groups
+  /polls/add:
+    post:
+      description: Create new poll
+      parameters:
+      - description: id of group
+        in: query
+        name: groupID
+        required: true
+        type: string
+      - description: title of poll
+        in: query
+        name: title
+        required: true
+        type: string
+      - description: 'first option '
+        in: query
+        name: firstOption
+        required: true
+        type: string
+      - description: second option
+        in: query
+        name: sercondOption
+        required: true
+        type: string
+      - description: duration of poll in minutes
+        in: query
+        minimum: 0
+        name: duration
+        type: integer
+      produces:
+      - application/json
+      responses: {}
+      security:
+      - BearerAuth: []
+      summary: CreatePoll
+      tags:
+      - polls
+  /polls/close:
+    put:
+      description: Close poll for voting
+      parameters:
+      - description: id of group
+        in: query
+        name: groupID
+        required: true
+        type: string
+      - description: id of poll
+        in: query
+        name: pollID
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses: {}
+      security:
+      - BearerAuth: []
+      summary: Close Poll
+      tags:
+      - polls
+  /polls/delete:
+    delete:
+      description: Delete poll by id
+      parameters:
+      - description: id of group
+        in: query
+        name: groupID
+        required: true
+        type: string
+      - description: id of poll
+        in: query
+        name: pollID
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses: {}
+      security:
+      - BearerAuth: []
+      summary: Delete Poll
+      tags:
+      - polls
+  /polls/getlist:
+    get:
+      description: Get list of polls
+      parameters:
+      - description: id of group
+        in: query
+        name: groupID
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses: {}
+      security:
+      - BearerAuth: []
+      summary: GetPolls
+      tags:
+      - polls
   /tasks/add:
     post:
-      consumes:
-      - application/json
       description: Create new task
       parameters:
       - description: Id of group
@@ -276,8 +350,6 @@ paths:
       - Tasks
   /tasks/delete:
     delete:
-      consumes:
-      - application/json
       description: Delete existing task
       parameters:
       - description: Id of group
@@ -300,8 +372,6 @@ paths:
       - Tasks
   /tasks/getlist:
     get:
-      consumes:
-      - application/json
       description: Create new task
       parameters:
       - description: Id of group
@@ -319,8 +389,6 @@ paths:
       - Tasks
   /tasks/update:
     put:
-      consumes:
-      - application/json
       description: update existing task
       parameters:
       - description: Id of group

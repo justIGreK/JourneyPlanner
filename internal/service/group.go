@@ -38,13 +38,13 @@ type InviteRepository interface {
 }
 
 type GroupSrv struct {
-	GroupRepository
-	UserRepository
-	InviteRepository
+	Group GroupRepository
+	User UserRepository
+	Invite InviteRepository
 }
 
 func NewGroupSrv(groupRepo GroupRepository, userRepo UserRepository, inviteRepo InviteRepository) *GroupSrv {
-	return &GroupSrv{GroupRepository: groupRepo, UserRepository: userRepo, InviteRepository: inviteRepo}
+	return &GroupSrv{Group: groupRepo, User: userRepo, Invite: inviteRepo}
 }
 
 func (s *GroupSrv) CreateGroup(ctx context.Context, groupName, userLogin string, invites []string) error {
@@ -57,12 +57,12 @@ func (s *GroupSrv) CreateGroup(ctx context.Context, groupName, userLogin string,
 		Polls:       []models.Poll{},
 		IsActive:    true,
 	}
-	err := s.GroupRepository.CreateGroup(ctx, group)
+	err := s.Group.CreateGroup(ctx, group)
 	return err
 }
 
 func (s *GroupSrv) GetGroupList(ctx context.Context, userLogin string) ([]models.GroupList, error) {
-	groups, err := s.GroupRepository.GetGroupList(ctx, userLogin)
+	groups, err := s.Group.GetGroupList(ctx, userLogin)
 	if err != nil {
 		return nil, err
 	}
@@ -88,7 +88,7 @@ func (s *GroupSrv) GetGroup(ctx context.Context, groupID, userLogin string) (*mo
 	if err != nil {
 		return nil, errors.New("InvalidID")
 	}
-	group, err := s.GroupRepository.GetGroupById(ctx, oid, userLogin)
+	group, err := s.Group.GetGroupById(ctx, oid, userLogin)
 	if err != nil {
 		return nil, err
 	}
@@ -100,25 +100,25 @@ func (s *GroupSrv) LeaveGroup(ctx context.Context, groupID, userLogin string) er
 	if err != nil {
 		return errors.New("InvalidID")
 	}
-	group, err := s.GroupRepository.GetGroupById(ctx, groupOID, userLogin)
+	group, err := s.Group.GetGroupById(ctx, groupOID, userLogin)
 	if err != nil {
 		return err
 	}
 	if len(group.Members) <= 1 {
-		if err := s.GroupRepository.DeleteGroup(ctx, groupOID); err != nil {
+		if err := s.Group.DeleteGroup(ctx, groupOID); err != nil {
 			return err
 		}
 		return nil
 	} else {
 		if group.LeaderLogin == userLogin {
 			newLeader := s.getRandomLeader(group.Members, userLogin)
-			err := s.GroupRepository.ChangeGroupLeader(ctx, groupOID, newLeader)
+			err := s.Group.ChangeGroupLeader(ctx, groupOID, newLeader)
 			if err != nil {
 				return err
 			}
 		}
 
-		err := s.GroupRepository.LeaveGroup(ctx, groupOID, userLogin)
+		err := s.Group.LeaveGroup(ctx, groupOID, userLogin)
 		if err != nil {
 			return err
 		}
@@ -148,7 +148,7 @@ func (s *GroupSrv) GiveLeaderRole(ctx context.Context, groupID, userLogin, membe
 	if err != nil {
 		return errors.New("InvalidID")
 	}
-	group, err := s.GroupRepository.GetGroupById(ctx, groupOID, userLogin)
+	group, err := s.Group.GetGroupById(ctx, groupOID, userLogin)
 	if err != nil {
 		return err
 	}
@@ -165,7 +165,7 @@ func (s *GroupSrv) GiveLeaderRole(ctx context.Context, groupID, userLogin, membe
 	if !isRealMember {
 		return errors.New("no such member")
 	}
-	err = s.GroupRepository.ChangeGroupLeader(ctx, groupOID, memberLogin)
+	err = s.Group.ChangeGroupLeader(ctx, groupOID, memberLogin)
 	if err != nil {
 		return err
 	}
@@ -177,14 +177,14 @@ func (s *GroupSrv) DeleteGroup(ctx context.Context, groupID, userLogin string) e
 	if err != nil {
 		return errors.New("InvalidID")
 	}
-	group, err := s.GroupRepository.GetGroupById(ctx, groupOID, userLogin)
+	group, err := s.Group.GetGroupById(ctx, groupOID, userLogin)
 	if err != nil {
 		return err
 	}
 	if group.LeaderLogin != userLogin {
 		return errors.New("you have no permissions to do this")
 	}
-	err = s.GroupRepository.DeleteGroup(ctx, groupOID)
+	err = s.Group.DeleteGroup(ctx, groupOID)
 	if err != nil {
 		return err
 	}
@@ -197,12 +197,12 @@ func (s *GroupSrv) InviteUser(ctx context.Context, groupID, userLogin string, in
 		return errors.New("InvalidID")
 	}
 	// ============================================================================== start checking
-	group, err := s.GroupRepository.GetGroupById(ctx, groupOID, userLogin)
+	group, err := s.Group.GetGroupById(ctx, groupOID, userLogin)
 	if err != nil {
 		return errors.New("group is not found, or you are not a member of it")
 	}
 
-	_, err = s.GetUserByLogin(ctx, invitedUser)
+	_, err = s.User.GetUserByLogin(ctx, invitedUser)
 	if err != nil {
 		return errors.New("user not found")
 	}
@@ -223,7 +223,7 @@ func (s *GroupSrv) InviteUser(ctx context.Context, groupID, userLogin string, in
 		return err
 	}
 
-	err = s.InviteRepository.AddInvitation(ctx, userLogin, invitedUser, group.Name, inviteToken)
+	err = s.Invite.AddInvitation(ctx, userLogin, invitedUser, group.Name, inviteToken)
 	if err != nil {
 		return err
 	}
@@ -258,11 +258,11 @@ func (s *GroupSrv) JoinGroup(ctx context.Context, token string) error {
 	if err != nil {
 		return errors.New("invalid group id")
 	}
-	_, err = s.GetUserByLogin(ctx, inviteDetails.UserLogin)
+	_, err = s.User.GetUserByLogin(ctx, inviteDetails.UserLogin)
 	if err !=nil{
 		return errors.New("user was not found")
 	}
-	isOkay, group, err := s.CheckGroupForExist(ctx, groupOID)
+	isOkay, group, err := s.Group.CheckGroupForExist(ctx, groupOID)
 	if !isOkay{
 		return errors.New("this group is no longer exist")
 	}
@@ -274,12 +274,12 @@ func (s *GroupSrv) JoinGroup(ctx context.Context, token string) error {
 	if !isOkay{
 		return errors.New("You are already member of this group")
 	}
-	err = s.GroupRepository.JoinGroup(ctx, groupOID, inviteDetails.UserLogin)
+	err = s.Group.JoinGroup(ctx, groupOID, inviteDetails.UserLogin)
 	if err != nil{
 		return err
 	}
 
-	err = s.DeleteInviteByToken(ctx, token)
+	err = s.Invite.DeleteInviteByToken(ctx, token)
 	if err != nil{
 		logs.Warn(err)
 	}
@@ -308,7 +308,7 @@ func (s *GroupSrv) ValidateInvitationToken(tokenString string) (*models.Invitati
 }
 
 func (s *GroupSrv) GetInviteList(ctx context.Context, userLogin string) ([]models.InvitationList, error) {
-	invites, err := s.GetInvites(ctx, userLogin)
+	invites, err := s.Invite.GetInvites(ctx, userLogin)
 	if err != nil {
 		return nil, err
 	}
@@ -333,7 +333,7 @@ func (s *GroupSrv) DeclineInvite(ctx context.Context, userLogin, inviteID string
 	if err != nil {
 		return err
 	}
-	modDocs, err := s.InviteRepository.DeleteInviteByID(ctx, inviteOID, userLogin)
+	modDocs, err := s.Invite.DeleteInviteByID(ctx, inviteOID, userLogin)
 	if err != nil{
 		return err
 	}

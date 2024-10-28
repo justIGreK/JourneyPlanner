@@ -11,7 +11,6 @@ import (
 // @Tags Tasks
 // @Description Create new task
 // @Security BearerAuth
-// @Accept  json
 // @Produce  json
 // @Param group_id query string true "Id of group"
 // @Param title query string true "Task Details"
@@ -69,7 +68,7 @@ func (h *Handler) AddTask(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Task is empty or missing required fields", http.StatusBadRequest)
 		return
 	}
-	err = h.CreateTask(r.Context(), taskInfo, userLogin)
+	err = h.Task.CreateTask(r.Context(), taskInfo, userLogin)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -83,14 +82,13 @@ func (h *Handler) AddTask(w http.ResponseWriter, r *http.Request) {
 // @Tags Tasks
 // @Description Create new task
 // @Security BearerAuth
-// @Accept  json
 // @Produce  json
 // @Param group_id query string true "Id of group"
 // @Router /tasks/getlist [get]
 func (h *Handler) GetTasks(w http.ResponseWriter, r *http.Request) {
 	userLogin := r.Context().Value(UserLoginKey).(string)
 	groupID := r.URL.Query().Get("group_id")
-	tasks, err := h.GetTaskList(r.Context(), groupID, userLogin)
+	tasks, err := h.Task.GetTaskList(r.Context(), groupID, userLogin)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -112,7 +110,6 @@ func (h *Handler) GetTasks(w http.ResponseWriter, r *http.Request) {
 // @Tags Tasks
 // @Description update existing task
 // @Security BearerAuth
-// @Accept  json
 // @Produce  json
 // @Param group_id query string true "Id of group"
 // @Param task_id query string true "task id"
@@ -175,7 +172,7 @@ func (h *Handler) UpdateTask(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "if you change start time, you need to fill and another part, and vice versa", http.StatusBadRequest)
 		return
 	}
-	err = h.TaskService.UpdateTask(r.Context(), taskID, userLogin, updateTask)
+	err = h.Task.UpdateTask(r.Context(), taskID, userLogin, updateTask)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -189,7 +186,6 @@ func (h *Handler) UpdateTask(w http.ResponseWriter, r *http.Request) {
 // @Tags Tasks
 // @Description Delete existing task
 // @Security BearerAuth
-// @Accept  json
 // @Produce  json
 // @Param group_id query string true "Id of group"
 // @Param task_id query string true "Id of group"
@@ -198,7 +194,7 @@ func (h *Handler) DeleteTask(w http.ResponseWriter, r *http.Request) {
 	userLogin := r.Context().Value(UserLoginKey).(string)
 	groupID := r.URL.Query().Get("group_id")
 	taskID := r.URL.Query().Get("task_id")
-	err := h.TaskService.DeleteTask(r.Context(), taskID, groupID, userLogin)
+	err := h.Task.DeleteTask(r.Context(), taskID, groupID, userLogin)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return

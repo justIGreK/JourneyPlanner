@@ -26,7 +26,7 @@ func (h *Handler) AuthMiddleware(next http.Handler) http.Handler {
 			return
 		}
 
-		payload, err := h.ValidatePasetoToken(token)
+		payload, err := h.User.ValidatePasetoToken(token)
 		if err != nil {
 			http.Error(w, "Invalid or expired token", http.StatusUnauthorized)
 			return

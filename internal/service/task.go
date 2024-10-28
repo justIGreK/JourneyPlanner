@@ -19,12 +19,12 @@ type TaskRepository interface {
 }
 
 type TaskSrv struct {
-	TaskRepository
-	GroupRepository
+	Task TaskRepository
+	Group GroupRepository
 }
 
 func NewTaskSrv(taskRepo TaskRepository, groupRepo GroupRepository) *TaskSrv {
-	return &TaskSrv{TaskRepository: taskRepo, GroupRepository: groupRepo}
+	return &TaskSrv{Task: taskRepo, Group: groupRepo}
 }
 
 func (s *TaskSrv) CreateTask(ctx context.Context, taskInfo models.CreateTask, userLogin string) error {
@@ -32,7 +32,7 @@ func (s *TaskSrv) CreateTask(ctx context.Context, taskInfo models.CreateTask, us
 	if err != nil {
 		return err
 	}
-	_, err = s.GroupRepository.GetGroupById(ctx, groupOID, userLogin)
+	_, err = s.Group.GetGroupById(ctx, groupOID, userLogin)
 	if err != nil {
 		return errors.New("this group is not exist or you are not member of it")
 	}
@@ -56,7 +56,7 @@ func (s *TaskSrv) CreateTask(ctx context.Context, taskInfo models.CreateTask, us
 		Duration:  totalDuration,
 		EndTime:   endTime,
 	}
-	existingTasks, err := s.TaskRepository.GetTaskList(ctx, userLogin, groupOID)
+	existingTasks, err := s.Task.GetTaskList(ctx, userLogin, groupOID)
 	if err != nil {
 		return err
 	}
@@ -66,7 +66,7 @@ func (s *TaskSrv) CreateTask(ctx context.Context, taskInfo models.CreateTask, us
 			return fmt.Errorf("task overlaps with an existing task: %s", existingTask.Title)
 		}
 	}
-	err = s.TaskRepository.AddTask(ctx, newTask)
+	err = s.Task.AddTask(ctx, newTask)
 	if err != nil {
 		return err
 	}
@@ -82,11 +82,11 @@ func (s *TaskSrv) GetTaskList(ctx context.Context, groupID, userLogin string) ([
 	if err != nil {
 		return nil, err
 	}
-	_, err = s.GroupRepository.GetGroupById(ctx, groupOID, userLogin)
+	_, err = s.Group.GetGroupById(ctx, groupOID, userLogin)
 	if err != nil {
 		return nil, errors.New("this group is not exist or you are not member of it")
 	}
-	tasks, err := s.TaskRepository.GetTaskList(ctx, userLogin, groupOID)
+	tasks, err := s.Task.GetTaskList(ctx, userLogin, groupOID)
 	if err != nil {
 		return nil, err
 	}
@@ -104,7 +104,7 @@ func (s *TaskSrv) UpdateTask(ctx context.Context, taskID, userLogin string, upda
 	if err != nil {
 		return fmt.Errorf("group id: %v", err)
 	}
-	group, err := s.GroupRepository.GetGroupById(ctx, groupOID, userLogin)
+	group, err := s.Group.GetGroupById(ctx, groupOID, userLogin)
 	if err != nil {
 		return errors.New("this group is not exist or you are not member of it")
 	}
@@ -112,7 +112,7 @@ func (s *TaskSrv) UpdateTask(ctx context.Context, taskID, userLogin string, upda
 	if group.LeaderLogin != userLogin {
 		return errors.New("you have no permissions to do this")
 	}
-	task, err := s.TaskRepository.GetTaskById(ctx, taskOID, groupOID)
+	task, err := s.Task.GetTaskById(ctx, taskOID, groupOID)
 	if err != nil {
 		return errors.New("task was not found")
 	}
@@ -150,7 +150,7 @@ func (s *TaskSrv) UpdateTask(ctx context.Context, taskID, userLogin string, upda
 		Duration: totalDuration,
 		EndTime:   endTime,
 	}
-	existingTasks, err := s.TaskRepository.GetTaskList(ctx, userLogin, groupOID)
+	existingTasks, err := s.Task.GetTaskList(ctx, userLogin, groupOID)
 	if err != nil {
 		return err
 	}
@@ -162,7 +162,7 @@ func (s *TaskSrv) UpdateTask(ctx context.Context, taskID, userLogin string, upda
 			}
 		}
 	}
-	err = s.TaskRepository.UpdateTask(ctx, taskOID, updates)
+	err = s.Task.UpdateTask(ctx, taskOID, updates)
 	if err != nil {
 		return err
 	}
@@ -182,14 +182,14 @@ func (s *TaskSrv) DeleteTask(ctx context.Context, taskID, groupID, userLogin str
 	if err != nil {
 		return fmt.Errorf("group id: %v", err)
 	}
-	group, err := s.GroupRepository.GetGroupById(ctx, groupOID, userLogin)
+	group, err := s.Group.GetGroupById(ctx, groupOID, userLogin)
 	if err != nil {
 		return errors.New("this group is not exist or you are not member of it")
 	}
 	if group.LeaderLogin != userLogin {
 		return errors.New("you have no permissions to do this")
 	}
-	err = s.TaskRepository.DeleteTask(ctx, taskOID)
+	err = s.Task.DeleteTask(ctx, taskOID)
 	if err != nil {
 		return err
 	}

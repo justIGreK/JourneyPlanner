@@ -18,7 +18,6 @@ func SetLogger(l *zap.Logger) {
 // @Tags groups
 // @Description Create new group
 // @Security BearerAuth
-// @Accept  json
 // @Produce  json
 // @Param name query string true "name of group"
 // @Param invites query []string false "by adding logins you will automatically invite this users" collectionFormat(multi)
@@ -33,7 +32,7 @@ func (h *Handler) AddGroup(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Validation failed: "+err.Error(), http.StatusBadRequest)
 		return
 	}
-	err := h.CreateGroup(r.Context(), groupInfo.Name, userLogin, groupInfo.Invitations)
+	err := h.Group.CreateGroup(r.Context(), groupInfo.Name, userLogin, groupInfo.Invitations)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -47,12 +46,11 @@ func (h *Handler) AddGroup(w http.ResponseWriter, r *http.Request) {
 // @Tags groups
 // @Description Get a list of all the groups you are a member of
 // @Security BearerAuth
-// @Accept  json
 // @Produce  json
 // @Router /groups/getlist [get]
 func (h *Handler) GetGroups(w http.ResponseWriter, r *http.Request) {
 	userLogin := r.Context().Value(UserLoginKey).(string)
-	groups, err := h.GetGroupList(r.Context(), userLogin)
+	groups, err := h.Group.GetGroupList(r.Context(), userLogin)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -68,14 +66,13 @@ func (h *Handler) GetGroups(w http.ResponseWriter, r *http.Request) {
 // @Tags groups
 // @Description Get full info about group you are a member of
 // @Security BearerAuth
-// @Accept  json
 // @Produce  json
 // @Param group_id query string true "id of group"
 // @Router /groups/getgroupinfo [get]
 func (h *Handler) GetGroupInfo(w http.ResponseWriter, r *http.Request) {
 	userLogin := r.Context().Value(UserLoginKey).(string)
 	groupId := r.URL.Query().Get("group_id")
-	groupDetails, err := h.GetGroup(r.Context(), groupId, userLogin)
+	groupDetails, err := h.Group.GetGroup(r.Context(), groupId, userLogin)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -91,14 +88,13 @@ func (h *Handler) GetGroupInfo(w http.ResponseWriter, r *http.Request) {
 // @Tags groups
 // @Description Leave from group
 // @Security BearerAuth
-// @Accept  json
 // @Produce  json
 // @Param group_id query string true "id of group"
 // @Router /groups/leaveGroup [post]
 func (h *Handler) LeaveFromGroup(w http.ResponseWriter, r *http.Request) {
 	userLogin := r.Context().Value(UserLoginKey).(string)
 	groupId := r.URL.Query().Get("group_id")
-	err := h.LeaveGroup(r.Context(), groupId, userLogin)
+	err := h.Group.LeaveGroup(r.Context(), groupId, userLogin)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -111,7 +107,6 @@ func (h *Handler) LeaveFromGroup(w http.ResponseWriter, r *http.Request) {
 // @Tags groups
 // @Description Give another member of group leader role
 // @Security BearerAuth
-// @Accept  json
 // @Produce  json
 // @Param user_login query string true "member login"
 // @Param group_id query string true "id of group"
@@ -120,7 +115,7 @@ func (h *Handler) ChangeLeader(w http.ResponseWriter, r *http.Request) {
 	userLogin := r.Context().Value(UserLoginKey).(string)
 	groupId := r.URL.Query().Get("group_id")
 	memberLogin := r.URL.Query().Get("user_login")
-	err := h.GiveLeaderRole(r.Context(), groupId, userLogin, memberLogin)
+	err := h.Group.GiveLeaderRole(r.Context(), groupId, userLogin, memberLogin)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -133,14 +128,13 @@ func (h *Handler) ChangeLeader(w http.ResponseWriter, r *http.Request) {
 // @Tags groups
 // @Description Delete group by id
 // @Security BearerAuth
-// @Accept  json
 // @Produce  json
 // @Param group_id query string true "id of group"
 // @Router /groups/delete [delete]
 func (h *Handler) DeleteGroup(w http.ResponseWriter, r *http.Request) {
 	userLogin := r.Context().Value(UserLoginKey).(string)
 	groupId := r.URL.Query().Get("group_id")
-	err := h.GroupService.DeleteGroup(r.Context(), groupId, userLogin)
+	err := h.Group.DeleteGroup(r.Context(), groupId, userLogin)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -152,7 +146,6 @@ func (h *Handler) DeleteGroup(w http.ResponseWriter, r *http.Request) {
 // @Tags invites
 // @Description Invite user to group
 // @Security BearerAuth
-// @Accept  json
 // @Produce  json
 // @Param group_id query string true "id of group"
 // @Param user_login query string true "invited user"
@@ -167,7 +160,7 @@ func (h *Handler) Invite(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Validation failed: "+err.Error(), http.StatusBadRequest)
 		return
 	}
-	err := h.InviteUser(r.Context(), inviteDetails.GroupID, userLogin, inviteDetails.User)
+	err := h.Group.InviteUser(r.Context(), inviteDetails.GroupID, userLogin, inviteDetails.User)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -181,12 +174,11 @@ func (h *Handler) Invite(w http.ResponseWriter, r *http.Request) {
 // @Tags invites
 // @Description Get your list of invites
 // @Security BearerAuth
-// @Accept  json
 // @Produce  json
 // @Router /groups/invitelist [get]
 func (h *Handler) GetInviteList(w http.ResponseWriter, r *http.Request) {
 	userLogin := r.Context().Value(UserLoginKey).(string)
-	invites, err := h.GroupService.GetInviteList(r.Context(), userLogin)
+	invites, err := h.Group.GetInviteList(r.Context(), userLogin)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -208,14 +200,13 @@ func (h *Handler) GetInviteList(w http.ResponseWriter, r *http.Request) {
 // @Tags invites
 // @Description Decline invite 
 // @Security BearerAuth
-// @Accept  json
 // @Produce  json
 // @Param invite_id query string true "Id of invite"
 // @Router /groups/declineinvite [post]
 func (h *Handler) DeclineInvite(w http.ResponseWriter, r *http.Request) {
 	userLogin := r.Context().Value(UserLoginKey).(string)
 	inviteID := r.URL.Query().Get("invite_id")
-	err := h.GroupService.DeclineInvite(r.Context(), userLogin, inviteID)
+	err := h.Group.DeclineInvite(r.Context(), userLogin, inviteID)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -227,7 +218,7 @@ func (h *Handler) DeclineInvite(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) JoinGroup(w http.ResponseWriter, r *http.Request) {
 	token := r.URL.Query().Get("token")
-	err := h.GroupService.JoinGroup(r.Context(), token)
+	err := h.Group.JoinGroup(r.Context(), token)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return

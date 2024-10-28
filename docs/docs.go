@@ -18,9 +18,6 @@ const docTemplate = `{
         "/auth/signIn": {
             "post": {
                 "description": "Authorization to the account",
-                "consumes": [
-                    "application/json"
-                ],
                 "produces": [
                     "application/json"
                 ],
@@ -50,9 +47,6 @@ const docTemplate = `{
         "/auth/singUp": {
             "post": {
                 "description": "Create account",
-                "consumes": [
-                    "application/json"
-                ],
                 "produces": [
                     "application/json"
                 ],
@@ -94,9 +88,6 @@ const docTemplate = `{
                     }
                 ],
                 "description": "Create new group",
-                "consumes": [
-                    "application/json"
-                ],
                 "produces": [
                     "application/json"
                 ],
@@ -134,9 +125,6 @@ const docTemplate = `{
                     }
                 ],
                 "description": "Decline invite",
-                "consumes": [
-                    "application/json"
-                ],
                 "produces": [
                     "application/json"
                 ],
@@ -164,9 +152,6 @@ const docTemplate = `{
                     }
                 ],
                 "description": "Delete group by id",
-                "consumes": [
-                    "application/json"
-                ],
                 "produces": [
                     "application/json"
                 ],
@@ -194,9 +179,6 @@ const docTemplate = `{
                     }
                 ],
                 "description": "Get full info about group you are a member of",
-                "consumes": [
-                    "application/json"
-                ],
                 "produces": [
                     "application/json"
                 ],
@@ -224,9 +206,6 @@ const docTemplate = `{
                     }
                 ],
                 "description": "Get a list of all the groups you are a member of",
-                "consumes": [
-                    "application/json"
-                ],
                 "produces": [
                     "application/json"
                 ],
@@ -245,9 +224,6 @@ const docTemplate = `{
                     }
                 ],
                 "description": "Give another member of group leader role",
-                "consumes": [
-                    "application/json"
-                ],
                 "produces": [
                     "application/json"
                 ],
@@ -282,9 +258,6 @@ const docTemplate = `{
                     }
                 ],
                 "description": "Invite user to group",
-                "consumes": [
-                    "application/json"
-                ],
                 "produces": [
                     "application/json"
                 ],
@@ -319,9 +292,6 @@ const docTemplate = `{
                     }
                 ],
                 "description": "Get your list of invites",
-                "consumes": [
-                    "application/json"
-                ],
                 "produces": [
                     "application/json"
                 ],
@@ -340,9 +310,6 @@ const docTemplate = `{
                     }
                 ],
                 "description": "Leave from group",
-                "consumes": [
-                    "application/json"
-                ],
                 "produces": [
                     "application/json"
                 ],
@@ -362,6 +329,156 @@ const docTemplate = `{
                 "responses": {}
             }
         },
+        "/polls/add": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Create new poll",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "polls"
+                ],
+                "summary": "CreatePoll",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "id of group",
+                        "name": "groupID",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "title of poll",
+                        "name": "title",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "first option ",
+                        "name": "firstOption",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "second option",
+                        "name": "sercondOption",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "minimum": 0,
+                        "type": "integer",
+                        "description": "duration of poll in minutes",
+                        "name": "duration",
+                        "in": "query"
+                    }
+                ],
+                "responses": {}
+            }
+        },
+        "/polls/close": {
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Close poll for voting",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "polls"
+                ],
+                "summary": "Close Poll",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "id of group",
+                        "name": "groupID",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "id of poll",
+                        "name": "pollID",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {}
+            }
+        },
+        "/polls/delete": {
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Delete poll by id",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "polls"
+                ],
+                "summary": "Delete Poll",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "id of group",
+                        "name": "groupID",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "id of poll",
+                        "name": "pollID",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {}
+            }
+        },
+        "/polls/getlist": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Get list of polls",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "polls"
+                ],
+                "summary": "GetPolls",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "id of group",
+                        "name": "groupID",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {}
+            }
+        },
         "/tasks/add": {
             "post": {
                 "security": [
@@ -370,9 +487,6 @@ const docTemplate = `{
                     }
                 ],
                 "description": "Create new task",
-                "consumes": [
-                    "application/json"
-                ],
                 "produces": [
                     "application/json"
                 ],
@@ -437,9 +551,6 @@ const docTemplate = `{
                     }
                 ],
                 "description": "Delete existing task",
-                "consumes": [
-                    "application/json"
-                ],
                 "produces": [
                     "application/json"
                 ],
@@ -474,9 +585,6 @@ const docTemplate = `{
                     }
                 ],
                 "description": "Create new task",
-                "consumes": [
-                    "application/json"
-                ],
                 "produces": [
                     "application/json"
                 ],
@@ -504,9 +612,6 @@ const docTemplate = `{
                     }
                 ],
                 "description": "update existing task",
-                "consumes": [
-                    "application/json"
-                ],
                 "produces": [
                     "application/json"
                 ],

@@ -38,7 +38,7 @@ func main() {
 	inviteRepo := mongorepo.NewMongoInviteRepo(dbclient)
 
 	userSrv := service.NewUserSrv(userRepo)
-	pollSrv := service.NewPollSrv(pollRepo)
+	pollSrv := service.NewPollSrv(pollRepo, groupRepo)
 	taskSrv := service.NewTaskSrv(taskRepo, groupRepo)
 	groupSrv := service.NewGroupSrv(groupRepo, userRepo, inviteRepo)
 	handler := handler.NewHandler(pollSrv, taskSrv, userSrv, groupSrv)
