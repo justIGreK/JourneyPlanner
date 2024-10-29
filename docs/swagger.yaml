@@ -74,6 +74,45 @@ paths:
       summary: AddGroup
       tags:
       - groups
+  /groups/ban:
+    put:
+      description: Kick and ban member from group
+      parameters:
+      - description: id of group
+        in: query
+        name: group_id
+        required: true
+        type: string
+      - description: login of member
+        in: query
+        name: memberLogin
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses: {}
+      security:
+      - BearerAuth: []
+      summary: BanMember
+      tags:
+      - blacklist
+  /groups/blacklist:
+    get:
+      description: Get blacklist of group
+      parameters:
+      - description: id of group
+        in: query
+        name: group_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses: {}
+      security:
+      - BearerAuth: []
+      summary: Get group blacklist
+      tags:
+      - blacklist
   /groups/declineinvite:
     post:
       description: Decline invite
@@ -208,6 +247,28 @@ paths:
       summary: LeaveFromGroup
       tags:
       - groups
+  /groups/unban:
+    put:
+      description: Unban member in group
+      parameters:
+      - description: id of group
+        in: query
+        name: group_id
+        required: true
+        type: string
+      - description: login of member
+        in: query
+        name: memberLogin
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses: {}
+      security:
+      - BearerAuth: []
+      summary: UnbanMember
+      tags:
+      - blacklist
   /polls/add:
     post:
       description: Create new poll
@@ -304,6 +365,36 @@ paths:
       security:
       - BearerAuth: []
       summary: GetPolls
+      tags:
+      - polls
+  /polls/vote:
+    put:
+      description: Vote for poll option
+      parameters:
+      - description: id of group
+        in: query
+        name: groupID
+        required: true
+        type: string
+      - description: id of poll
+        in: query
+        name: pollID
+        required: true
+        type: string
+      - description: vote option
+        enum:
+        - firstOption
+        - secondOption
+        in: query
+        name: option
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses: {}
+      security:
+      - BearerAuth: []
+      summary: Vote Poll
       tags:
       - polls
   /tasks/add:

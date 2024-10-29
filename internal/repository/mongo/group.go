@@ -24,9 +24,9 @@ func NewMongoGroupRepo(db *mongo.Client) *MongoGroupRepo {
 	return &MongoGroupRepo{GroupColl: db.Database(dbname).Collection(groupCollection)}
 }
 
-func (r *MongoGroupRepo) CreateGroup(ctx context.Context, group models.Group) error {
-	_, err := r.GroupColl.InsertOne(ctx, group)
-	return err
+func (r *MongoGroupRepo) CreateGroup(ctx context.Context, group models.Group) (primitive.ObjectID, error){
+	result, err := r.GroupColl.InsertOne(ctx, group)
+	return result.InsertedID.(primitive.ObjectID), err
 }
 
 func (r *MongoGroupRepo) GetGroupList(ctx context.Context, userLogin string) ([]models.Group, error) {
@@ -50,11 +50,11 @@ func (r *MongoGroupRepo) GetGroupList(ctx context.Context, userLogin string) ([]
 	return groupList, nil
 }
 
-func (r *MongoGroupRepo) GetGroupById(ctx context.Context, groupID primitive.ObjectID, userLogin string) (*models.Group, error) {
+func (r *MongoGroupRepo) GetGroupById(ctx context.Context, groupOID primitive.ObjectID, userLogin string) (*models.Group, error) {
 	var group models.Group
 	filter := bson.M{
 		"$and": []bson.M{
-			{"_id": groupID},
+			{"_id": groupOID},
 			{"members": userLogin},
 			{"isActive": true},
 		},
@@ -67,11 +67,11 @@ func (r *MongoGroupRepo) GetGroupById(ctx context.Context, groupID primitive.Obj
 	return &group, nil
 }
 
-func (r *MongoGroupRepo) CheckGroupForExist(ctx context.Context, groupID primitive.ObjectID) (bool, *models.Group, error) {
+func (r *MongoGroupRepo) CheckGroupForExist(ctx context.Context, groupOID primitive.ObjectID) (bool, *models.Group, error) {
 	var group models.Group
 	filter := bson.M{
 		"$and": []bson.M{
-			{"_id": groupID},
+			{"_id": groupOID},
 			{"isActive": true},
 		},
 	}
@@ -86,10 +86,10 @@ func (r *MongoGroupRepo) CheckGroupForExist(ctx context.Context, groupID primiti
 
 	return true, &group, nil
 }
-func (r *MongoGroupRepo) ChangeGroupLeader(ctx context.Context, groupID primitive.ObjectID, userLogin string) error {
+func (r *MongoGroupRepo) ChangeGroupLeader(ctx context.Context, groupOID primitive.ObjectID, userLogin string) error {
 	filter := bson.M{
 		"$and": []bson.M{
-			{"_id": groupID},
+			{"_id": groupOID},
 			{"isActive": true},
 		},
 	}
@@ -103,10 +103,10 @@ func (r *MongoGroupRepo) ChangeGroupLeader(ctx context.Context, groupID primitiv
 	return nil
 }
 
-func (r *MongoGroupRepo) DeleteGroup(ctx context.Context, groupID primitive.ObjectID) error {
+func (r *MongoGroupRepo) DeleteGroup(ctx context.Context, groupOID primitive.ObjectID) error {
 	filter := bson.M{
 		"$and": []bson.M{
-			{"_id": groupID},
+			{"_id": groupOID},
 			{"isActive": true},
 		},
 	}
@@ -118,10 +118,10 @@ func (r *MongoGroupRepo) DeleteGroup(ctx context.Context, groupID primitive.Obje
 	}
 	return nil
 }
-func (r *MongoGroupRepo) LeaveGroup(ctx context.Context, groupID primitive.ObjectID, userLogin string) error {
+func (r *MongoGroupRepo) LeaveGroup(ctx context.Context, groupOID primitive.ObjectID, userLogin string) error {
 	filter := bson.M{
 		"$and": []bson.M{
-			{"_id": groupID},
+			{"_id": groupOID},
 			{"isActive": true},
 		},
 	}
@@ -139,10 +139,10 @@ func (r *MongoGroupRepo) LeaveGroup(ctx context.Context, groupID primitive.Objec
 	return nil
 }
 
-func (r *MongoGroupRepo) JoinGroup(ctx context.Context, groupID primitive.ObjectID, userLogin string) error {
+func (r *MongoGroupRepo) JoinGroup(ctx context.Context, groupOID primitive.ObjectID, userLogin string) error {
 	filter := bson.M{
 		"$and": []bson.M{
-			{"_id": groupID},
+			{"_id": groupOID},
 			{"isActive": true},
 		},
 	}

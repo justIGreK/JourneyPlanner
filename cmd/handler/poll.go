@@ -121,4 +121,32 @@ func (h *Handler) ClosePoll(w http.ResponseWriter, r *http.Request) {
 
 
 
+// @Summary Vote Poll
+// @Tags polls
+// @Description Vote for poll option
+// @Security BearerAuth
+// @Produce  json
+// @Param groupID query string true "id of group"
+// @Param pollID query string true "id of poll"
+// @Param option query string true "vote option" Enums(firstOption, secondOption)
+// @Router /polls/vote [put]
+func (h *Handler) VotePoll(w http.ResponseWriter, r *http.Request) {
+	userLogin := r.Context().Value(UserLoginKey).(string)
+	vote := models.AddVote{
+		GroupID: r.URL.Query().Get("groupID"),
+		PollID: r.URL.Query().Get("pollID"),
+		Option: r.URL.Query().Get("option"),
+	}
+	err := h.Poll.VotePoll(r.Context(), userLogin, vote)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode("Done")
+}
+
+
+
+
 
