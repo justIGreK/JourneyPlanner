@@ -14,20 +14,24 @@ import (
 type GroupService interface {
 	CreateGroup(ctx context.Context, groupName, userLogin string, invites []string) error
 	GetGroupList(ctx context.Context, userLogin string) ([]models.GroupList, error)
-	GetGroup(ctx context.Context, groupID, userLogin string) (*models.Group, error)
+	GetGroupByID(ctx context.Context, groupID, userLogin string) (*models.Group, error)
 	LeaveGroup(ctx context.Context, groupID, userLogin string) error
 	DeleteGroup(ctx context.Context, groupID, userLogin string) error
 	GiveLeaderRole(ctx context.Context, groupID, userLogin, memberLogin string) error
-	InviteUser(ctx context.Context, groupID, userLogin string, invitedUser string) error
+	InviteUser(ctx context.Context, groupID, userLogin, invitedUser string) error
 	GetInviteList(ctx context.Context, userLogin string) ([]models.InvitationList, error)
 	DeclineInvite(ctx context.Context, userLogin, inviteID string)error
 	JoinGroup(ctx context.Context, token string) error
+	GetBlacklist(ctx context.Context, groupID, userLogin string)(*models.BlackList, error)
+	BanMember(ctx context.Context, groupID, memberLogin, userLogin string) error
+	UnbanMember(ctx context.Context, groupID, memberLogin, userLogin string) error
 }
 type PollService interface {
 	CreatePoll(ctx context.Context, pollInfo models.CreatePoll, userLogin string) error
 	GetPollList(ctx context.Context, groupID, userLogin string) (*models.PollList, error)
 	DeletePollByID(ctx context.Context, pollID, groupID, userLogin string) error
 	ClosePoll(ctx context.Context, pollID, groupID, userLogin string) error
+	VotePoll(ctx context.Context, userLogin string, vote models.AddVote) error
 }
 
 type TaskService interface {
@@ -79,6 +83,9 @@ func (h *Handler) InitRoutes() *chi.Mux {
 		r.Post("/invite", h.Invite)
 		r.Get("/invitelist", h.GetInviteList)
 		r.Post("/declineinvite", h.DeclineInvite)
+		r.Put("/ban", h.BanMember)
+		r.Put("/unban", h.UnbanMember)
+		r.Get("/blacklist", h.GetBlacklist)
 	})
 	r.Route("/tasks", func(r chi.Router){
 		r.Use(h.AuthMiddleware)
@@ -93,6 +100,7 @@ func (h *Handler) InitRoutes() *chi.Mux {
 		r.Get("/getlist", h.GetPolls)
 		r.Delete("/delete", h.DeletePoll)
 		r.Put("/close", h.ClosePoll)
+		r.Put("/vote", h.VotePoll)
 	})
 	return r
 }

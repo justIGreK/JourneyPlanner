@@ -21,30 +21,39 @@ func SetLogger(l *zap.Logger) {
 }
 
 type GroupRepository interface {
-	CreateGroup(ctx context.Context, group models.Group) error
+	CreateGroup(ctx context.Context, group models.Group) (primitive.ObjectID, error)
 	GetGroupList(ctx context.Context, userLogin string) ([]models.Group, error)
-	GetGroupById(ctx context.Context, groupID primitive.ObjectID, userLogin string) (*models.Group, error)
-	ChangeGroupLeader(ctx context.Context, groupID primitive.ObjectID, userLogin string) error
-	DeleteGroup(ctx context.Context, groupID primitive.ObjectID) error
-	JoinGroup(ctx context.Context, groupID primitive.ObjectID, userLogin string) error
-	LeaveGroup(ctx context.Context, groupID primitive.ObjectID, userLogin string) error
+	GetGroupById(ctx context.Context, groupOID primitive.ObjectID, userLogin string) (*models.Group, error)
+	ChangeGroupLeader(ctx context.Context, groupOID primitive.ObjectID, userLogin string) error
+	DeleteGroup(ctx context.Context, groupOID primitive.ObjectID) error
+	JoinGroup(ctx context.Context, groupOID primitive.ObjectID, userLogin string) error
+	LeaveGroup(ctx context.Context, groupOID primitive.ObjectID, userLogin string) error
 	CheckGroupForExist(ctx context.Context, groupID primitive.ObjectID) (bool, *models.Group, error) 
 }
 type InviteRepository interface {
-	AddInvitation(ctx context.Context, inviteCreator, invitedUser, groupName, token string) error
+	AddInvitation(ctx context.Context, iinvite models.Invitation) error
 	GetInvites(ctx context.Context, userLogin string) ([]models.Invitation, error)
 	DeleteInviteByID(ctx context.Context, inviteID primitive.ObjectID, userLogin string) (int64, error)
 	DeleteInviteByToken(ctx context.Context, token string)  error
+	IsAlreadyInvited(ctx context.Context, groupOID primitive.ObjectID, userLogin string) bool
+}
+type BlackListRepository interface {
+	CreateBlacklist(ctx context.Context, groupOID primitive.ObjectID) error
+	BanUser(ctx context.Context, groupOID primitive.ObjectID, userLogin string) error
+	UnbanUser(ctx context.Context, groupOID primitive.ObjectID, userLogin string) error
+	GetBlacklist(ctx context.Context, groupOID primitive.ObjectID) (*models.BlackList, error)
 }
 
 type GroupSrv struct {
 	Group GroupRepository
 	User UserRepository
 	Invite InviteRepository
+	BlackList BlackListRepository
 }
 
-func NewGroupSrv(groupRepo GroupRepository, userRepo UserRepository, inviteRepo InviteRepository) *GroupSrv {
-	return &GroupSrv{Group: groupRepo, User: userRepo, Invite: inviteRepo}
+func NewGroupSrv(groupRepo GroupRepository, userRepo UserRepository,
+	inviteRepo InviteRepository, blackList BlackListRepository) *GroupSrv {
+	return &GroupSrv{Group: groupRepo, User: userRepo, Invite: inviteRepo, BlackList: blackList}
 }
 
 func (s *GroupSrv) CreateGroup(ctx context.Context, groupName, userLogin string, invites []string) error {
@@ -57,8 +66,15 @@ func (s *GroupSrv) CreateGroup(ctx context.Context, groupName, userLogin string,
 		Polls:       []models.Poll{},
 		IsActive:    true,
 	}
-	err := s.Group.CreateGroup(ctx, group)
-	return err
+	groupOID, err := s.Group.CreateGroup(ctx, group)
+	if err != nil{
+		return fmt.Errorf("createGroup error: %v", err)
+	}
+	err = s.BlackList.CreateBlacklist(ctx, groupOID)
+	if err != nil{
+		return fmt.Errorf("create blacklist error: %v", err)
+	}
+	return nil
 }
 
 func (s *GroupSrv) GetGroupList(ctx context.Context, userLogin string) ([]models.GroupList, error) {
@@ -83,7 +99,7 @@ func (s *GroupSrv) GetGroupList(ctx context.Context, userLogin string) ([]models
 
 }
 
-func (s *GroupSrv) GetGroup(ctx context.Context, groupID, userLogin string) (*models.Group, error) {
+func (s *GroupSrv) GetGroupByID(ctx context.Context, groupID, userLogin string) (*models.Group, error) {
 	oid, err := primitive.ObjectIDFromHex(groupID)
 	if err != nil {
 		return nil, errors.New("InvalidID")
@@ -93,6 +109,88 @@ func (s *GroupSrv) GetGroup(ctx context.Context, groupID, userLogin string) (*mo
 		return nil, err
 	}
 	return group, nil
+}
+
+func (s *GroupSrv) BanMember(ctx context.Context, groupID, memberLogin, userLogin string) error {
+	groupOID, err := primitive.ObjectIDFromHex(groupID)
+	if err != nil {
+		return errors.New("InvalidID")
+	}
+	group, err := s.Group.GetGroupById(ctx, groupOID, userLogin)
+	if err != nil {
+		return err
+	}
+	if group.LeaderLogin != userLogin{
+		return errors.New("you have no permissions to do this")
+	}
+	isOkay := false
+	for _, member := range group.Members{
+		if member == memberLogin{
+			isOkay = true
+			break
+		}
+	}
+	if !isOkay{
+		return errors.New("Member is not found")
+	}
+	err = s.Group.LeaveGroup(ctx, groupOID, memberLogin)
+	if err != nil{
+		return err
+	}
+	err = s.BlackList.BanUser(ctx, groupOID, memberLogin)
+	if err != nil{
+		return err
+	}
+	return nil
+}
+func (s *GroupSrv) UnbanMember(ctx context.Context, groupID, memberLogin, userLogin string) error {
+	groupOID, err := primitive.ObjectIDFromHex(groupID)
+	if err != nil {
+		return errors.New("InvalidID")
+	}
+	group, err := s.Group.GetGroupById(ctx, groupOID, userLogin)
+	if err != nil {
+		return err
+	}
+	if group.LeaderLogin != userLogin{
+		return errors.New("you have no permissions to do this")
+	}
+	blacklist, err := s.BlackList.GetBlacklist(ctx, groupOID)
+	isOkay := false
+	for _, member := range blacklist.Blacklist{
+		if member == memberLogin{
+			isOkay = true
+			break
+		}
+	}
+	if !isOkay{
+		return errors.New("this is not banned in this group")
+	}
+	err = s.BlackList.UnbanUser(ctx, groupOID, memberLogin)
+	if err != nil{
+		return err
+	}
+	return nil
+}
+
+func (s *GroupSrv) GetBlacklist(ctx context.Context, groupID, userLogin string)(*models.BlackList, error){
+	groupOID, err := primitive.ObjectIDFromHex(groupID)
+	if err != nil {
+		return nil, errors.New("InvalidID")
+	}
+	group, err := s.Group.GetGroupById(ctx, groupOID, userLogin)
+	if err != nil {
+		return nil, err
+	}
+	if group.LeaderLogin != userLogin{
+		return nil, errors.New("you have no permissions to do this")
+	}
+
+	blacklist, err := s.BlackList.GetBlacklist(ctx, groupOID)
+	if err != nil{
+		return nil, err
+	}
+	return blacklist, nil
 }
 
 func (s *GroupSrv) LeaveGroup(ctx context.Context, groupID, userLogin string) error {
@@ -191,7 +289,7 @@ func (s *GroupSrv) DeleteGroup(ctx context.Context, groupID, userLogin string) e
 	return nil
 }
 
-func (s *GroupSrv) InviteUser(ctx context.Context, groupID, userLogin string, invitedUser string) error {
+func (s *GroupSrv) InviteUser(ctx context.Context, groupID, userLogin, invitedUser string) error {
 	groupOID, err := primitive.ObjectIDFromHex(groupID)
 	if err != nil {
 		return errors.New("InvalidID")
@@ -216,6 +314,23 @@ func (s *GroupSrv) InviteUser(ctx context.Context, groupID, userLogin string, in
 	if !isOkay {
 		return errors.New("user is alredy member of this group")
 	}
+	blacklist, err := s.BlackList.GetBlacklist(ctx, groupOID)
+	if err !=nil{
+		return fmt.Errorf("cant get blacklist of group")
+	}
+	for _, member := range blacklist.Blacklist{
+		if member == invitedUser{
+			isOkay = false
+			break
+		}
+	}
+	if !isOkay{
+		return errors.New("this user have been banned from this group")
+	}
+	isOkay = s.Invite.IsAlreadyInvited(ctx, groupOID, invitedUser)
+	if !isOkay{
+		return errors.New("this user is already invited to this group")
+	}
 	// ============================================================================== end of check
 
 	inviteToken, err := s.GetInviteToken(invitedUser, groupID)
@@ -223,7 +338,15 @@ func (s *GroupSrv) InviteUser(ctx context.Context, groupID, userLogin string, in
 		return err
 	}
 
-	err = s.Invite.AddInvitation(ctx, userLogin, invitedUser, group.Name, inviteToken)
+	invite := models.Invitation{
+		Sender:    userLogin,
+		Receiver:  invitedUser,
+		GroupID: groupOID,
+		GroupName: group.Name,
+		Token:     inviteToken,
+		IsUsed:    false,
+	}
+	err = s.Invite.AddInvitation(ctx, invite)
 	if err != nil {
 		return err
 	}
@@ -269,11 +392,26 @@ func (s *GroupSrv) JoinGroup(ctx context.Context, token string) error {
 	for _, member := range group.Members{
 		if member == inviteDetails.UserLogin{
 			isOkay = false
+			break
 		}
 	}
 	if !isOkay{
 		return errors.New("You are already member of this group")
 	}
+	blacklist, err := s.BlackList.GetBlacklist(ctx, groupOID)
+	if err != nil{
+		return fmt.Errorf("cant get blacklist of group, %v", err)
+	}
+	for _, member := range blacklist.Blacklist{
+		if member == inviteDetails.UserLogin{
+			isOkay = false
+			break
+		}
+	}
+	if !isOkay{
+		return errors.New("You have been banned from this group")
+	}
+	
 	err = s.Group.JoinGroup(ctx, groupOID, inviteDetails.UserLogin)
 	if err != nil{
 		return err

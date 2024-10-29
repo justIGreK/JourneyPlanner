@@ -24,10 +24,26 @@ type CreatePoll struct {
 	Title        string `json:"title" validate:"required"`
 	FirstOption  string `json:"fstOption" validate:"required"`
 	SecondOption string `json:"sndOption" validate:"required"`
-	Duration     uint64    `json:"duration" validate:"required"`
+	Duration     uint64 `json:"duration" validate:"required"`
 }
 
 type PollList struct {
-	OpenPolls   []Poll
-	ClosedPolls []Poll
+	OpenPolls   []PrintPollList
+	ClosedPolls []PrintPollList
+}
+
+type PrintPollList struct {
+	ID               primitive.ObjectID
+	Title            string
+	Creator          string
+	FirstOption      string
+	FirstVotesCount  int
+	SecondOption     string
+	SecondVotesCount int
+	EndTime          string
+}
+type AddVote struct {
+	GroupID string `json:"groupID" validate:"required"`
+	PollID  string `json:"pollID" validate:"required"`
+	Option  string `json:"option" validate:"required"`
 }

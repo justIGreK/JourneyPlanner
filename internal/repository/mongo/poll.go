@@ -3,6 +3,7 @@ package mongorepo
 import (
 	"JourneyPlanner/internal/models"
 	"context"
+	"errors"
 	"time"
 
 	"go.mongodb.org/mongo-driver/bson"
@@ -23,10 +24,10 @@ func (r *MongoPollRepo) CreatePoll(ctx context.Context, poll models.Poll) error 
 	return err
 }
 
-func (r *MongoPollRepo) GetPollList(ctx context.Context, groupOID primitive.ObjectID) (*models.PollList, error) {
+func (r *MongoPollRepo) GetPollList(ctx context.Context, groupOID primitive.ObjectID) ([]models.Poll, []models.Poll, error) {
 	now := time.Now().UTC()
 	filter := bson.M{
-		"group_id": groupOID ,
+		"group_id": groupOID,
 		"$or": []bson.M{
 			{"endtime": bson.M{"$lt": now}},
 			{"isEarlyClosed": true},
@@ -36,12 +37,12 @@ func (r *MongoPollRepo) GetPollList(ctx context.Context, groupOID primitive.Obje
 	cursor, err := r.PollColl.Find(ctx, filter)
 	if err != nil {
 		logs.Error("GetPollList error", err)
-		return nil, err
+		return nil, nil, err
 	}
 	err = cursor.All(ctx, &closedPolls)
 	if err != nil {
 		logs.Error("GetPollList error, cursor.All()", err)
-		return nil, err
+		return nil, nil, err
 	}
 	filter = bson.M{
 		"$and": []bson.M{
@@ -53,15 +54,15 @@ func (r *MongoPollRepo) GetPollList(ctx context.Context, groupOID primitive.Obje
 	cursor, err = r.PollColl.Find(ctx, filter)
 	if err != nil {
 		logs.Error("GetPollList error", err)
-		return nil, err
+		return nil, nil, err
 	}
 	err = cursor.All(ctx, &openPolls)
 	if err != nil {
 		logs.Error("GetPollList error, cursor.All()", err)
-		return nil, err
+		return nil, nil, err
 	}
-	pollList := models.PollList{OpenPolls: openPolls, ClosedPolls: closedPolls}
-	return &pollList, nil
+	
+	return openPolls, closedPolls, nil
 }
 
 func (r *MongoPollRepo) GetPollById(ctx context.Context, pollOID primitive.ObjectID) (*models.Poll, error) {
@@ -102,19 +103,32 @@ func (r *MongoPollRepo) DeletePoll(ctx context.Context, pollOID primitive.Object
 	return nil
 }
 
-func (r *MongoPollRepo) AddVote(ctx context.Context, pollOID primitive.ObjectID, userLogin string) error {
+const (
+	firstOption  = "firstOption"
+	secondOption = "secondOption"
+)
+
+func (r *MongoPollRepo) AddVote(ctx context.Context, pollOID primitive.ObjectID, voteOption, userLogin string) error {
 	now := time.Now().UTC()
 	filter := bson.M{
 		"$and": []bson.M{
 			{"_id": pollOID},
-			{"endtime": bson.M{"$lte": now}},
+			{"endtime": bson.M{"$gt": now}},
 			{"isEarlyClosed": false},
 		},
 	}
-
-	update := bson.M{"$push": bson.M{
-		"votes": userLogin,
-	}}
+	var update bson.M
+	if voteOption == firstOption {
+		update = bson.M{"$push": bson.M{
+			"votes1": userLogin,
+		}}
+	} else if voteOption == secondOption {
+		update = bson.M{"$push": bson.M{
+			"votes2": userLogin,
+		}}
+	} else {
+		return errors.New("unexpected error. Invalid voteOption")
+	}
 	_, err := r.PollColl.UpdateOne(ctx, filter, update)
 	if err != nil {
 		logs.Error("ClosePoll error", err)
@@ -127,13 +141,14 @@ func (r *MongoPollRepo) RemoveVote(ctx context.Context, pollOID primitive.Object
 	filter := bson.M{
 		"$and": []bson.M{
 			{"_id": pollOID},
-			{"endtime": bson.M{"$gte": now}},
+			{"endtime": bson.M{"$gt": now}},
 			{"isEarlyClosed": false},
 		},
 	}
 
 	update := bson.M{"$pull": bson.M{
-		"votes": userLogin,
+		"votes1": userLogin,
+		"votes2": userLogin,
 	}}
 	_, err := r.PollColl.UpdateOne(ctx, filter, update)
 	if err != nil {

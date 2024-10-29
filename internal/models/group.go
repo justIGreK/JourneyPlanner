@@ -22,3 +22,8 @@ type Group struct {
 	Polls       []Poll             `json:"polls" bson:"polls"`
 	IsActive    bool               `json:"-" bson:"isActive"`
 }
+
+type BlackList struct {
+	GroupID   primitive.ObjectID `bson:"group_id"`
+	Blacklist []string           `bson:"blacklist"`
+}

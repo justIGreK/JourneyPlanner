@@ -72,7 +72,7 @@ func (h *Handler) GetGroups(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) GetGroupInfo(w http.ResponseWriter, r *http.Request) {
 	userLogin := r.Context().Value(UserLoginKey).(string)
 	groupId := r.URL.Query().Get("group_id")
-	groupDetails, err := h.Group.GetGroup(r.Context(), groupId, userLogin)
+	groupDetails, err := h.Group.GetGroupByID(r.Context(), groupId, userLogin)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -82,6 +82,72 @@ func (h *Handler) GetGroupInfo(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(response)
+}
+
+// @Summary Get group blacklist
+// @Tags blacklist
+// @Description Get blacklist of group
+// @Security BearerAuth
+// @Produce  json
+// @Param group_id query string true "id of group"
+// @Router /groups/blacklist [get]
+func (h *Handler) GetBlacklist(w http.ResponseWriter, r *http.Request) {
+	userLogin := r.Context().Value(UserLoginKey).(string)
+	groupId := r.URL.Query().Get("group_id")
+	blacklist, err := h.Group.GetBlacklist(r.Context(), groupId, userLogin)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	response := map[string]interface{}{
+		"blacklist": blacklist,
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(response)
+}
+
+// @Summary BanMember 
+// @Tags blacklist
+// @Description Kick and ban member from group
+// @Security BearerAuth
+// @Produce  json
+// @Param group_id query string true "id of group"
+// @Param memberLogin query string true "login of member"
+// @Router /groups/ban [put]
+func (h *Handler) BanMember(w http.ResponseWriter, r *http.Request) {
+	userLogin := r.Context().Value(UserLoginKey).(string)
+	groupId := r.URL.Query().Get("group_id")
+	member := r.URL.Query().Get("memberLogin")
+	if member == userLogin{
+		http.Error(w, "you cant kick yourself", http.StatusBadRequest)
+		return
+	}
+	err := h.Group.BanMember(r.Context(), groupId, member, userLogin)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	json.NewEncoder(w).Encode("Done")
+}
+
+// @Summary UnbanMember 
+// @Tags blacklist
+// @Description Unban member in group
+// @Security BearerAuth
+// @Produce  json
+// @Param group_id query string true "id of group"
+// @Param memberLogin query string true "login of member"
+// @Router /groups/unban [put]
+func (h *Handler) UnbanMember(w http.ResponseWriter, r *http.Request) {
+	userLogin := r.Context().Value(UserLoginKey).(string)
+	groupId := r.URL.Query().Get("group_id")
+	member := r.URL.Query().Get("memberLogin")
+	err := h.Group.UnbanMember(r.Context(), groupId, member, userLogin)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	json.NewEncoder(w).Encode("Done")
 }
 
 // @Summary LeaveFromGroup

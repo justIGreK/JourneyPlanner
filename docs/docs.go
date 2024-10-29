@@ -117,6 +117,67 @@ const docTemplate = `{
                 "responses": {}
             }
         },
+        "/groups/ban": {
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Kick and ban member from group",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "blacklist"
+                ],
+                "summary": "BanMember",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "id of group",
+                        "name": "group_id",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "login of member",
+                        "name": "memberLogin",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {}
+            }
+        },
+        "/groups/blacklist": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Get blacklist of group",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "blacklist"
+                ],
+                "summary": "Get group blacklist",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "id of group",
+                        "name": "group_id",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {}
+            }
+        },
         "/groups/declineinvite": {
             "post": {
                 "security": [
@@ -329,6 +390,40 @@ const docTemplate = `{
                 "responses": {}
             }
         },
+        "/groups/unban": {
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Unban member in group",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "blacklist"
+                ],
+                "summary": "UnbanMember",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "id of group",
+                        "name": "group_id",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "login of member",
+                        "name": "memberLogin",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {}
+            }
+        },
         "/polls/add": {
             "post": {
                 "security": [
@@ -472,6 +567,51 @@ const docTemplate = `{
                         "type": "string",
                         "description": "id of group",
                         "name": "groupID",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {}
+            }
+        },
+        "/polls/vote": {
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Vote for poll option",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "polls"
+                ],
+                "summary": "Vote Poll",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "id of group",
+                        "name": "groupID",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "id of poll",
+                        "name": "pollID",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "enum": [
+                            "firstOption",
+                            "secondOption"
+                        ],
+                        "type": "string",
+                        "description": "vote option",
+                        "name": "option",
                         "in": "query",
                         "required": true
                     }

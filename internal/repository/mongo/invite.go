@@ -17,14 +17,7 @@ func NewMongoInviteRepo(db *mongo.Client) *MongoInviteRepo {
 	return &MongoInviteRepo{InviteColl: db.Database(dbname).Collection(inviteCollection)}
 }
 
-func (r *MongoInviteRepo) AddInvitation(ctx context.Context, inviteCreator, invitedUser, groupName, token string) error {
-	invite := models.Invitation{
-		Sender:    inviteCreator,
-		Receiver:  invitedUser,
-		GroupName: groupName,
-		Token:     token,
-		IsUsed:    false,
-	}
+func (r *MongoInviteRepo) AddInvitation(ctx context.Context, invite models.Invitation) error {
 	_, err := r.InviteColl.InsertOne(ctx, invite)
 	return err
 }
@@ -48,6 +41,26 @@ func (r *MongoInviteRepo) GetInvites(ctx context.Context, userLogin string) ([]m
 	}
 	return invites, nil
 }
+
+func (r *MongoInviteRepo) IsAlreadyInvited(ctx context.Context, groupOID primitive.ObjectID, userLogin string) bool{
+	var invite models.Invitation
+	filter := bson.M{
+		"$and": []bson.M{
+			{"isUsed": false},
+			{"receiver": userLogin},
+			{"group_id": groupOID},
+		},
+	}
+	err := r.InviteColl.FindOne(ctx, filter).Decode(&invite)
+	if err != nil{
+		if err == mongo.ErrNoDocuments{
+			return true
+		}
+		logs.Error(err)
+	}
+	return false
+} 
+
 
 func (r *MongoInviteRepo) DeleteInviteByToken(ctx context.Context, token string) error {
 	filter := bson.M{
