@@ -18,6 +18,7 @@ const (
 	groupCollection = "groups"
 	inviteCollection = "invites"
 	blacklistCollection = "blacklist"
+	chatCollection = "messages"
 )
 
 func CreateMongoClient(ctx context.Context) *mongo.Client {

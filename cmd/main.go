@@ -3,8 +3,10 @@ package main
 import (
 	"JourneyPlanner/cmd/config"
 	"JourneyPlanner/cmd/handler"
+	"JourneyPlanner/cmd/handler/ws"
 	mongorepo "JourneyPlanner/internal/repository/mongo"
 	"JourneyPlanner/internal/service"
+	"JourneyPlanner/internal/service/chat"
 	logger "JourneyPlanner/pkg/log"
 	"context"
 	"net/http"
@@ -13,7 +15,6 @@ import (
 )
 
 var logs *zap.Logger
-
 
 // @title Journer Planner
 // @description Application for planning your journey
@@ -37,25 +38,26 @@ func main() {
 	groupRepo := mongorepo.NewMongoGroupRepo(dbclient)
 	inviteRepo := mongorepo.NewMongoInviteRepo(dbclient)
 	blacklistRepo := mongorepo.NewMongoBlacklistRepo(dbclient)
+	chatRepo := mongorepo.NewChatRepository(dbclient)
+	chatService := chat.NewChatService(chatRepo)
 
 	userSrv := service.NewUserSrv(userRepo)
 	pollSrv := service.NewPollSrv(pollRepo, groupRepo)
 	taskSrv := service.NewTaskSrv(taskRepo, groupRepo)
 	groupSrv := service.NewGroupSrv(groupRepo, userRepo, inviteRepo, blacklistRepo)
+	wsHandler := ws.NewWebSocketHandler(chatService, groupSrv)
 	handler := handler.NewHandler(pollSrv, taskSrv, userSrv, groupSrv)
 	logs.Sugar().Info("Server is now listening 8080...")
-	err := http.ListenAndServe(":8080", handler.InitRoutes())
+	err := http.ListenAndServe(":8080", handler.InitRoutes(wsHandler))
 	if err != nil {
 		logs.Sugar().Fatal("Server error", zap.Error(err))
 	}
 }
 
-
-
-
-func setUpProjectLogger(logger *zap.Logger){
+func setUpProjectLogger(logger *zap.Logger) {
 	config.SetLogger(logger)
 	handler.SetLogger(logger)
 	service.SetLogger(logger)
 	mongorepo.SetLogger(logger)
+	ws.SetLogger(logger)
 }
