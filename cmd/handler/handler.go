@@ -4,6 +4,7 @@ import (
 	"JourneyPlanner/internal/models"
 	"JourneyPlanner/internal/service"
 	"context"
+	"net/http"
 
 	_ "JourneyPlanner/docs"
 
@@ -20,9 +21,9 @@ type GroupService interface {
 	GiveLeaderRole(ctx context.Context, groupID, userLogin, memberLogin string) error
 	InviteUser(ctx context.Context, groupID, userLogin, invitedUser string) error
 	GetInviteList(ctx context.Context, userLogin string) ([]models.InvitationList, error)
-	DeclineInvite(ctx context.Context, userLogin, inviteID string)error
+	DeclineInvite(ctx context.Context, userLogin, inviteID string) error
 	JoinGroup(ctx context.Context, token string) error
-	GetBlacklist(ctx context.Context, groupID, userLogin string)(*models.BlackList, error)
+	GetBlacklist(ctx context.Context, groupID, userLogin string) (*models.BlackList, error)
 	BanMember(ctx context.Context, groupID, memberLogin, userLogin string) error
 	UnbanMember(ctx context.Context, groupID, memberLogin, userLogin string) error
 }
@@ -47,27 +48,33 @@ type UserService interface {
 	ValidatePasetoToken(tokenString string) (*service.TokenPayload, error)
 }
 
+type WsHandler interface {
+	HandleConnections(w http.ResponseWriter, r *http.Request)
+}
+
 type Handler struct {
-	Poll PollService
-	Task TaskService
-	User UserService
-	Group GroupService
+	Poll      PollService
+	Task      TaskService
+	User      UserService
+	Group     GroupService
 }
 
 func NewHandler(pollService PollService, taskService TaskService,
 	userService UserService, groupService GroupService) *Handler {
 	return &Handler{
-		Poll:  pollService,
-		Task:  taskService,
-		User:  userService,
-		Group: groupService,
+		Poll:      pollService,
+		Task:      taskService,
+		User:      userService,
+		Group:     groupService,
+	
 	}
 }
 
-func (h *Handler) InitRoutes() *chi.Mux {
+func (h *Handler) InitRoutes(wsHandler WsHandler) *chi.Mux {
 	r := chi.NewRouter()
 	r.Get("/swagger/*", httpSwagger.WrapHandler)
 	r.Get("/join-group", h.JoinGroup)
+	r.Get("/ws", wsHandler.HandleConnections)	
 	r.Route("/auth", func(r chi.Router) {
 		r.Post("/singUp", h.SignUp)
 		r.Post("/signIn", h.SignIn)
@@ -87,14 +94,14 @@ func (h *Handler) InitRoutes() *chi.Mux {
 		r.Put("/unban", h.UnbanMember)
 		r.Get("/blacklist", h.GetBlacklist)
 	})
-	r.Route("/tasks", func(r chi.Router){
+	r.Route("/tasks", func(r chi.Router) {
 		r.Use(h.AuthMiddleware)
 		r.Post("/add", h.AddTask)
 		r.Get("/getlist", h.GetTasks)
 		r.Delete("/delete", h.DeleteTask)
 		r.Put("/update", h.UpdateTask)
 	})
-	r.Route("/polls", func(r chi.Router){
+	r.Route("/polls", func(r chi.Router) {
 		r.Use(h.AuthMiddleware)
 		r.Post("/add", h.CreatePoll)
 		r.Get("/getlist", h.GetPolls)
