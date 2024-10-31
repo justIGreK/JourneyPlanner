@@ -4,6 +4,7 @@ import (
 	"JourneyPlanner/internal/models"
 	"encoding/json"
 	"net/http"
+	"strings"
 
 	"go.uber.org/zap"
 )
@@ -20,19 +21,16 @@ func SetLogger(l *zap.Logger) {
 // @Security BearerAuth
 // @Produce  json
 // @Param name query string true "name of group"
-// @Param invites query []string false "by adding logins you will automatically invite this users" collectionFormat(multi)
 // @Router /groups/add [post]
 func (h *Handler) AddGroup(w http.ResponseWriter, r *http.Request) {
 	userLogin := r.Context().Value(UserLoginKey).(string)
-	groupInfo := models.CreateGroup{
-		Name:        r.URL.Query().Get("name"),
-		Invitations: r.URL.Query()["invites"],
-	}
-	if err := validate.Struct(groupInfo); err != nil {
-		http.Error(w, "Validation failed: "+err.Error(), http.StatusBadRequest)
+	name :=  r.URL.Query().Get("name")
+	name = strings.TrimSpace(name)
+	if name == ""{
+		http.Error(w, "Invalid name", http.StatusBadRequest)
 		return
 	}
-	err := h.Group.CreateGroup(r.Context(), groupInfo.Name, userLogin, groupInfo.Invitations)
+	err := h.Group.CreateGroup(r.Context(), name, userLogin)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return

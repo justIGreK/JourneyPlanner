@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
@@ -19,58 +18,68 @@ func NewMongoPollRepo(db *mongo.Client) *MongoPollRepo {
 	return &MongoPollRepo{PollColl: db.Database(dbname).Collection(pollCollection)}
 }
 
-func (r *MongoPollRepo) CreatePoll(ctx context.Context, poll models.Poll) error {
-	_, err := r.PollColl.InsertOne(ctx, poll)
+func (r *MongoPollRepo) CreatePoll(ctx context.Context, poll models.Poll, groupID string) error {
+	oid, err := convertToObjectIDs(groupID)
+	if err != nil {
+		return errors.New("InvalidID")
+	}
+	poll.GroupID = oid[0]
+	_, err = r.PollColl.InsertOne(ctx, poll)
 	return err
 }
 
-func (r *MongoPollRepo) GetPollList(ctx context.Context, groupOID primitive.ObjectID) ([]models.Poll, []models.Poll, error) {
+func (r *MongoPollRepo) GetPollList(ctx context.Context, groupID string) ([]models.Poll, []models.Poll, error) {
+	oid, err := convertToObjectIDs(groupID)
+	if err != nil {
+		return nil, nil, errors.New("InvalidID")
+	}
 	now := time.Now().UTC()
-	filter := bson.M{
-		"group_id": groupOID,
+	getPolls := func(filter bson.M) ([]models.Poll, error) {
+		cursor, err := r.PollColl.Find(ctx, filter)
+		if err != nil {
+			logs.Error("GetPollList error", err)
+			return nil, err
+		}
+		var polls []models.Poll
+		if err := cursor.All(ctx, &polls); err != nil {
+			logs.Error("GetPollList error, cursor.All()", err)
+			return nil, err
+		}
+		return polls, nil
+	}
+	closedFilter := bson.M{
+		"group_id": oid[0],
 		"$or": []bson.M{
 			{"endtime": bson.M{"$lt": now}},
 			{"isEarlyClosed": true},
 		},
 	}
-	openPolls, closedPolls := []models.Poll{}, []models.Poll{}
-	cursor, err := r.PollColl.Find(ctx, filter)
+	closedPolls, err := getPolls(closedFilter)
 	if err != nil {
-		logs.Error("GetPollList error", err)
 		return nil, nil, err
 	}
-	err = cursor.All(ctx, &closedPolls)
+	openFilter := bson.M{
+		"group_id":      oid[0],
+		"isEarlyClosed": false,
+		"endtime":       bson.M{"$gt": now},
+	}
+	openPolls, err := getPolls(openFilter)
 	if err != nil {
-		logs.Error("GetPollList error, cursor.All()", err)
 		return nil, nil, err
 	}
-	filter = bson.M{
-		"$and": []bson.M{
-			{"group_id": groupOID},
-			{"isEarlyClosed": false},
-			{"endtime": bson.M{"$gt": now}},
-		},
-	}
-	cursor, err = r.PollColl.Find(ctx, filter)
-	if err != nil {
-		logs.Error("GetPollList error", err)
-		return nil, nil, err
-	}
-	err = cursor.All(ctx, &openPolls)
-	if err != nil {
-		logs.Error("GetPollList error, cursor.All()", err)
-		return nil, nil, err
-	}
-	
+
 	return openPolls, closedPolls, nil
 }
-
-func (r *MongoPollRepo) GetPollById(ctx context.Context, pollOID primitive.ObjectID) (*models.Poll, error) {
+func (r *MongoPollRepo) GetPollById(ctx context.Context, pollID string) (*models.Poll, error) {
+	oid, err := convertToObjectIDs(pollID)
+	if err != nil {
+		return nil, errors.New("InvalidID")
+	}
 	var poll models.Poll
 	filter := bson.M{
-		"_id": pollOID,
+		"_id": oid[0],
 	}
-	err := r.PollColl.FindOne(ctx, filter).Decode(&poll)
+	err = r.PollColl.FindOne(ctx, filter).Decode(&poll)
 	if err != nil {
 		logs.Error("GetPollById error", err)
 		return nil, err
@@ -78,15 +87,19 @@ func (r *MongoPollRepo) GetPollById(ctx context.Context, pollOID primitive.Objec
 	return &poll, nil
 }
 
-func (r *MongoPollRepo) ClosePoll(ctx context.Context, pollOID primitive.ObjectID) error {
+func (r *MongoPollRepo) ClosePoll(ctx context.Context, pollID string) error {
+	oid, err := convertToObjectIDs(pollID)
+	if err != nil {
+		return errors.New("InvalidID")
+	}
 	filter := bson.M{
 		"$and": []bson.M{
-			{"_id": pollOID},
+			{"_id": oid[0]},
 			{"isEarlyClosed": false},
 		},
 	}
 	update := bson.M{"$set": bson.M{"isEarlyClosed": true}}
-	_, err := r.PollColl.UpdateOne(ctx, filter, update)
+	_, err = r.PollColl.UpdateOne(ctx, filter, update)
 	if err != nil {
 		logs.Error("ClosePoll error", err)
 		return err
@@ -94,9 +107,13 @@ func (r *MongoPollRepo) ClosePoll(ctx context.Context, pollOID primitive.ObjectI
 	return nil
 }
 
-func (r *MongoPollRepo) DeletePoll(ctx context.Context, pollOID primitive.ObjectID) error {
-	filter := bson.M{"_id": pollOID}
-	_, err := r.PollColl.DeleteOne(ctx, filter)
+func (r *MongoPollRepo) DeletePoll(ctx context.Context, pollID string) error {
+	oid, err := convertToObjectIDs(pollID)
+	if err != nil {
+		return errors.New("InvalidID")
+	}
+	filter := bson.M{"_id": oid[0]}
+	_, err = r.PollColl.DeleteOne(ctx, filter)
 	if err != nil {
 		return err
 	}
@@ -108,11 +125,15 @@ const (
 	secondOption = "secondOption"
 )
 
-func (r *MongoPollRepo) AddVote(ctx context.Context, pollOID primitive.ObjectID, voteOption, userLogin string) error {
+func (r *MongoPollRepo) AddVote(ctx context.Context, pollID, voteOption, userLogin string) error {
+	oid, err := convertToObjectIDs(pollID)
+	if err != nil {
+		return errors.New("InvalidID")
+	}
 	now := time.Now().UTC()
 	filter := bson.M{
 		"$and": []bson.M{
-			{"_id": pollOID},
+			{"_id": oid[0]},
 			{"endtime": bson.M{"$gt": now}},
 			{"isEarlyClosed": false},
 		},
@@ -129,18 +150,22 @@ func (r *MongoPollRepo) AddVote(ctx context.Context, pollOID primitive.ObjectID,
 	} else {
 		return errors.New("unexpected error. Invalid voteOption")
 	}
-	_, err := r.PollColl.UpdateOne(ctx, filter, update)
+	_, err = r.PollColl.UpdateOne(ctx, filter, update)
 	if err != nil {
 		logs.Error("ClosePoll error", err)
 		return err
 	}
 	return nil
 }
-func (r *MongoPollRepo) RemoveVote(ctx context.Context, pollOID primitive.ObjectID, userLogin string) error {
+func (r *MongoPollRepo) RemoveVote(ctx context.Context, pollID, userLogin string) error {
+	oid, err := convertToObjectIDs(pollID)
+	if err != nil {
+		return errors.New("InvalidID")
+	}
 	now := time.Now().UTC()
 	filter := bson.M{
 		"$and": []bson.M{
-			{"_id": pollOID},
+			{"_id": oid[0]},
 			{"endtime": bson.M{"$gt": now}},
 			{"isEarlyClosed": false},
 		},
@@ -150,7 +175,7 @@ func (r *MongoPollRepo) RemoveVote(ctx context.Context, pollOID primitive.Object
 		"votes1": userLogin,
 		"votes2": userLogin,
 	}}
-	_, err := r.PollColl.UpdateOne(ctx, filter, update)
+	_, err = r.PollColl.UpdateOne(ctx, filter, update)
 	if err != nil {
 		logs.Error("ClosePoll error", err)
 		return err

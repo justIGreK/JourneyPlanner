@@ -3,9 +3,9 @@ package mongorepo
 import (
 	"JourneyPlanner/internal/models"
 	"context"
+	"errors"
 
 	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
@@ -22,23 +22,27 @@ func (r *MongoUserRepo) CreateUser(ctx context.Context, user models.User) error 
 	return err
 }
 
-func (r *MongoUserRepo) GetUserByEmail(ctx context.Context, email string) (models.User, error) {
+func (r *MongoUserRepo) GetUserByEmail(ctx context.Context, email string) (*models.User, error) {
 	var user models.User
 	filter := bson.M{"email": email}
 	err := r.UserColl.FindOne(ctx, filter).Decode(&user)
-	return user, err
+	return &user, err
 }
 
-func (r *MongoUserRepo) GetUserByLogin(ctx context.Context, login string) (models.User, error) {
+func (r *MongoUserRepo) GetUserByLogin(ctx context.Context, login string) (*models.User, error) {
 	var user models.User
 	filter := bson.M{"login": login}
 	err := r.UserColl.FindOne(ctx, filter).Decode(&user)
-	return user, err
+	return &user, err
 }
 
-func (r *MongoUserRepo) GetUserByID(ctx context.Context, id primitive.ObjectID) (models.User, error) {
+func (r *MongoUserRepo) GetUserByID(ctx context.Context, id string) (*models.User, error) {
+	oid, err := convertToObjectIDs(id)
+	if err != nil {
+		return nil, errors.New("InvalidID")
+	}
 	var user models.User
-	filter := bson.M{"_id": id}
-	err := r.UserColl.FindOne(ctx, filter).Decode(&user)
-	return user, err
+	filter := bson.M{"_id": oid[0]}
+	err = r.UserColl.FindOne(ctx, filter).Decode(&user)
+	return &user, err
 }

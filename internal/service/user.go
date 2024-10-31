@@ -7,16 +7,15 @@ import (
 	"fmt"
 	"regexp"
 
-	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.uber.org/zap"
 	"golang.org/x/crypto/bcrypt"
 )
 
 type UserRepository interface {
 	CreateUser(ctx context.Context, user models.User) error
-	GetUserByEmail(ctx context.Context, email string) (models.User, error)
-	GetUserByLogin(ctx context.Context, login string) (models.User, error)
-	GetUserByID(ctx context.Context, id primitive.ObjectID) (models.User, error)
+	GetUserByEmail(ctx context.Context, email string) (*models.User, error)
+	GetUserByLogin(ctx context.Context, login string) (*models.User, error)
+	GetUserByID(ctx context.Context, id string) (*models.User, error)
 }
 
 type UserSrv struct {
@@ -54,7 +53,7 @@ func (s *UserSrv) RegisterUser(ctx context.Context, user models.SignUp) error {
 }
 
 func (s *UserSrv) LoginUser(ctx context.Context, option, password string) (string, error) {
-	var user models.User
+	var user *models.User
 	var err error
 	if s.isValidEmail(option) {
 		user, err = s.User.GetUserByEmail(ctx, option)

@@ -59,13 +59,6 @@ paths:
         name: name
         required: true
         type: string
-      - collectionFormat: multi
-        description: by adding logins you will automatically invite this users
-        in: query
-        items:
-          type: string
-        name: invites
-        type: array
       produces:
       - application/json
       responses: {}

@@ -3,9 +3,9 @@ package mongorepo
 import (
 	"JourneyPlanner/internal/models"
 	"context"
+	"errors"
 
 	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
@@ -17,14 +17,23 @@ func NewMongoTaskRepo(db *mongo.Client) *MongoTaskRepo {
 	return &MongoTaskRepo{TaskColl: db.Database(dbname).Collection(taskCollection)}
 }
 
-func (r *MongoTaskRepo) AddTask(ctx context.Context, task models.Task) error {
-	_, err := r.TaskColl.InsertOne(ctx, task)
+func (r *MongoTaskRepo) AddTask(ctx context.Context, task models.Task, groupID string) error {
+	oid, err := convertToObjectIDs(groupID)
+	if err != nil {
+		return errors.New("InvalidID")
+	}
+	task.GroupID = oid[0]
+	_, err = r.TaskColl.InsertOne(ctx, task)
 	return err
 }
 
-func (r *MongoTaskRepo) GetTaskList(ctx context.Context, userLogin string, groupID primitive.ObjectID) ([]models.Task, error) {
+func (r *MongoTaskRepo) GetTaskList(ctx context.Context, userLogin, groupID string) ([]models.Task, error) {
+	oid, err := convertToObjectIDs(groupID)
+	if err != nil {
+		return nil, errors.New("InvalidID")
+	}
 	var taskList []models.Task
-	filter := bson.M{"group_id": groupID}
+	filter := bson.M{"group_id": oid[0]}
 	cursor, err := r.TaskColl.Find(ctx, filter)
 	if err != nil {
 		return nil, err
@@ -37,32 +46,44 @@ func (r *MongoTaskRepo) GetTaskList(ctx context.Context, userLogin string, group
 	return taskList, nil
 }
 
-func (r *MongoTaskRepo) GetTaskById(ctx context.Context, taskID, groupID primitive.ObjectID) (*models.Task, error) {
+func (r *MongoTaskRepo) GetTaskById(ctx context.Context, taskID, groupID string) (*models.Task, error) {
+	oid, err := convertToObjectIDs(taskID, groupID)
+	if err != nil {
+		return nil, err
+	}
 	var task models.Task
 	filter := bson.M{
 		"$and": []bson.M{
-			{"_id": taskID},
-			{"group_id": groupID},
+			{"_id": oid[0]},
+			{"group_id": oid[1]},
 		},
 	}
-	err := r.TaskColl.FindOne(ctx, filter).Decode(&task)
+	err = r.TaskColl.FindOne(ctx, filter).Decode(&task)
 	if err != nil {
 		return nil, err
 	}
 	return &task, nil
 }
 
-func (r *MongoTaskRepo) DeleteTask(ctx context.Context, taskID primitive.ObjectID) error {
-	filter := bson.M{"_id": taskID}
-	_, err := r.TaskColl.DeleteOne(ctx, filter)
+func (r *MongoTaskRepo) DeleteTask(ctx context.Context, taskID string) error {
+	oid, err := convertToObjectIDs(taskID)
+	if err != nil {
+		return errors.New("InvalidID")
+	}
+	filter := bson.M{"_id": oid[0]}
+	_, err = r.TaskColl.DeleteOne(ctx, filter)
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func (r *MongoTaskRepo) UpdateTask(ctx context.Context, taskID primitive.ObjectID, newTask models.Task) error {
-	filter := bson.M{"_id": taskID}
+func (r *MongoTaskRepo) UpdateTask(ctx context.Context, taskID string, newTask models.Task) error {
+	oid, err := convertToObjectIDs(taskID)
+	if err != nil {
+		return errors.New("InvalidID")
+	}
+	filter := bson.M{"_id": oid[0]}
 
 	update := bson.M{}
 	if newTask.Title != "" {
@@ -81,7 +102,7 @@ func (r *MongoTaskRepo) UpdateTask(ctx context.Context, taskID primitive.ObjectI
 		"$set": update,
 	}
 
-	_, err := r.TaskColl.UpdateOne(ctx, filter, updateQuery)
+	_, err = r.TaskColl.UpdateOne(ctx, filter, updateQuery)
 	if err != nil {
 		return err
 	}

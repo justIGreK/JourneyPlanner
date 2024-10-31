@@ -2,23 +2,25 @@ package mongorepo
 
 import (
 	"context"
+	"errors"
 
 	"os"
 
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"go.uber.org/zap"
 )
 
 const (
-	dbname          = "journeydb"
-	pollCollection  = "polls"
-	taskCollection  = "tasks"
-	userCollection  = "users"
-	groupCollection = "groups"
-	inviteCollection = "invites"
+	dbname              = "journeydb"
+	pollCollection      = "polls"
+	taskCollection      = "tasks"
+	userCollection      = "users"
+	groupCollection     = "groups"
+	inviteCollection    = "invites"
 	blacklistCollection = "blacklist"
-	chatCollection = "messages"
+	chatCollection      = "messages"
 )
 
 func CreateMongoClient(ctx context.Context) *mongo.Client {
@@ -32,4 +34,18 @@ func CreateMongoClient(ctx context.Context) *mongo.Client {
 		logs.Fatal("MongoDB is not connected: ", zap.Error(err))
 	}
 	return client
+}
+
+func convertToObjectIDs(ids ...string) ([]primitive.ObjectID, error) {
+	objectIDs := make([]primitive.ObjectID, 0, len(ids))
+
+	for _, id := range ids {
+		oid, err := primitive.ObjectIDFromHex(id)
+		if err != nil {
+			return nil, errors.New("InvalidID: " + id)
+		}
+		objectIDs = append(objectIDs, oid)
+	}
+
+	return objectIDs, nil
 }

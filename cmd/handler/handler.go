@@ -13,7 +13,7 @@ import (
 )
 
 type GroupService interface {
-	CreateGroup(ctx context.Context, groupName, userLogin string, invites []string) error
+	CreateGroup(ctx context.Context, groupName, userLogin string) error
 	GetGroupList(ctx context.Context, userLogin string) ([]models.GroupList, error)
 	GetGroupByID(ctx context.Context, groupID, userLogin string) (*models.Group, error)
 	LeaveGroup(ctx context.Context, groupID, userLogin string) error
