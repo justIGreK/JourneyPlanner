@@ -44,16 +44,22 @@ type BlackListRepository interface {
 	GetBlacklist(ctx context.Context, groupOID primitive.ObjectID) (*models.BlackList, error)
 }
 
+type WebSockerConn interface{
+	KickUser(userLogin, groupID string)
+}
+
 type GroupSrv struct {
 	Group GroupRepository
 	User UserRepository
 	Invite InviteRepository
 	BlackList BlackListRepository
+	NotifyUserDisconnect  func(userLogin string, groupID string)
 }
 
 func NewGroupSrv(groupRepo GroupRepository, userRepo UserRepository,
 	inviteRepo InviteRepository, blackList BlackListRepository) *GroupSrv {
-	return &GroupSrv{Group: groupRepo, User: userRepo, Invite: inviteRepo, BlackList: blackList}
+	return &GroupSrv{Group: groupRepo, User: userRepo, 
+		Invite: inviteRepo, BlackList: blackList}
 }
 
 func (s *GroupSrv) CreateGroup(ctx context.Context, groupName, userLogin string, invites []string) error {
@@ -141,6 +147,7 @@ func (s *GroupSrv) BanMember(ctx context.Context, groupID, memberLogin, userLogi
 	if err != nil{
 		return err
 	}
+	s.NotifyUserDisconnect(userLogin, groupID)
 	return nil
 }
 func (s *GroupSrv) UnbanMember(ctx context.Context, groupID, memberLogin, userLogin string) error {
@@ -221,9 +228,8 @@ func (s *GroupSrv) LeaveGroup(ctx context.Context, groupID, userLogin string) er
 			return err
 		}
 	}
-
+	s.NotifyUserDisconnect(userLogin, groupID)
 	return nil
-
 }
 
 func (s *GroupSrv) getRandomLeader(members []string, userLogin string) string {

@@ -106,7 +106,7 @@ func (h *Handler) GetBlacklist(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(response)
 }
 
-// @Summary BanMember 
+// @Summary BanMember
 // @Tags blacklist
 // @Description Kick and ban member from group
 // @Security BearerAuth
@@ -118,7 +118,7 @@ func (h *Handler) BanMember(w http.ResponseWriter, r *http.Request) {
 	userLogin := r.Context().Value(UserLoginKey).(string)
 	groupId := r.URL.Query().Get("group_id")
 	member := r.URL.Query().Get("memberLogin")
-	if member == userLogin{
+	if member == userLogin {
 		http.Error(w, "you cant kick yourself", http.StatusBadRequest)
 		return
 	}
@@ -130,7 +130,7 @@ func (h *Handler) BanMember(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode("Done")
 }
 
-// @Summary UnbanMember 
+// @Summary UnbanMember
 // @Tags blacklist
 // @Description Unban member in group
 // @Security BearerAuth
@@ -168,7 +168,6 @@ func (h *Handler) LeaveFromGroup(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusAccepted)
 }
 
-
 // @Summary GiveLeaderRole
 // @Tags groups
 // @Description Give another member of group leader role
@@ -188,7 +187,6 @@ func (h *Handler) ChangeLeader(w http.ResponseWriter, r *http.Request) {
 	}
 	w.WriteHeader(http.StatusAccepted)
 }
-
 
 // @Summary DeleteGroup
 // @Tags groups
@@ -220,7 +218,7 @@ func (h *Handler) Invite(w http.ResponseWriter, r *http.Request) {
 	userLogin := r.Context().Value(UserLoginKey).(string)
 	inviteDetails := models.CreateInvite{
 		GroupID: r.URL.Query().Get("group_id"),
-		User:   r.URL.Query().Get("user_login"),
+		User:    r.URL.Query().Get("user_login"),
 	}
 	if err := validate.Struct(inviteDetails); err != nil {
 		http.Error(w, "Validation failed: "+err.Error(), http.StatusBadRequest)
@@ -236,7 +234,7 @@ func (h *Handler) Invite(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode("Done")
 }
 
-// @Summary Get invite list 
+// @Summary Get invite list
 // @Tags invites
 // @Description Get your list of invites
 // @Security BearerAuth
@@ -249,22 +247,22 @@ func (h *Handler) GetInviteList(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	if len(invites) == 0{
+	if len(invites) == 0 {
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode("Your current invitelist is empty")
-		return 
+		return
 	}
 	response := map[string]interface{}{
 		"invites": invites,
 	}
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(response)
-	
+
 }
 
-// @Summary Decline invite 
+// @Summary Decline invite
 // @Tags invites
-// @Description Decline invite 
+// @Description Decline invite
 // @Security BearerAuth
 // @Produce  json
 // @Param invite_id query string true "Id of invite"
@@ -279,7 +277,7 @@ func (h *Handler) DeclineInvite(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode("invite declined")
-	
+
 }
 
 func (h *Handler) JoinGroup(w http.ResponseWriter, r *http.Request) {

@@ -46,6 +46,8 @@ func main() {
 	taskSrv := service.NewTaskSrv(taskRepo, groupRepo)
 	groupSrv := service.NewGroupSrv(groupRepo, userRepo, inviteRepo, blacklistRepo)
 	wsHandler := ws.NewWebSocketHandler(chatService, groupSrv)
+	groupSrv.NotifyUserDisconnect = wsHandler.NotifyUserDisconnect
+
 	handler := handler.NewHandler(pollSrv, taskSrv, userSrv, groupSrv)
 	logs.Sugar().Info("Server is now listening 8080...")
 	err := http.ListenAndServe(":8080", handler.InitRoutes(wsHandler))

@@ -74,13 +74,13 @@ func (h *Handler) InitRoutes(wsHandler WsHandler) *chi.Mux {
 	r := chi.NewRouter()
 	r.Get("/swagger/*", httpSwagger.WrapHandler)
 	r.Get("/join-group", h.JoinGroup)
-	r.Get("/ws", wsHandler.HandleConnections)	
 	r.Route("/auth", func(r chi.Router) {
 		r.Post("/singUp", h.SignUp)
 		r.Post("/signIn", h.SignIn)
 	})
 	r.Route("/groups", func(r chi.Router) {
 		r.Use(h.AuthMiddleware)
+		r.Get("/ws", wsHandler.HandleConnections)	
 		r.Post("/add", h.AddGroup)
 		r.Get("/getlist", h.GetGroups)
 		r.Get("/getgroupinfo", h.GetGroupInfo)

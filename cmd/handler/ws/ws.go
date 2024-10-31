@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"sync"
 	"time"
 
 	"github.com/go-playground/validator/v10"
@@ -23,18 +24,19 @@ type ChatService interface {
 type WebSocketHandler struct {
 	ChatService ChatService
 	Group       GroupService
-	Clients     map[*websocket.Conn]bool
 	Upgrader    websocket.Upgrader
+	Clients     map[string]*websocket.Conn
+	mu          sync.Mutex
 }
 
 func NewWebSocketHandler(chatService ChatService, groupService GroupService) *WebSocketHandler {
 	return &WebSocketHandler{
 		ChatService: chatService,
 		Group:       groupService,
-		Clients:     make(map[*websocket.Conn]bool),
 		Upgrader: websocket.Upgrader{
 			CheckOrigin: func(r *http.Request) bool { return true },
 		},
+		Clients: make(map[string]*websocket.Conn),
 	}
 }
 
@@ -44,17 +46,16 @@ func SetLogger(l *zap.Logger) {
 	logs = l.Sugar()
 }
 
-type contextKey string
-
 const (
-	UserLoginKey contextKey = "user_id"
+	UserLoginKey string = "user_id"
 )
 
 var validate = validator.New()
 
 func (h *WebSocketHandler) HandleConnections(w http.ResponseWriter, r *http.Request) {
+	userLogin := r.Context().Value(UserLoginKey).(string)
 	msg := models.Message{
-		User:    r.URL.Query().Get("user_login"),
+		User:    userLogin,
 		GroupID: r.URL.Query().Get("group_id"),
 		Time:    time.Now().UTC(),
 	}
@@ -74,13 +75,18 @@ func (h *WebSocketHandler) HandleConnections(w http.ResponseWriter, r *http.Requ
 		return
 	}
 	defer ws.Close()
-	h.Clients[ws] = true
+
+	connKey := fmt.Sprintf("%s_%s", msg.User, msg.GroupID)
+	h.mu.Lock()
+	if _, ok := h.Clients[connKey]; !ok {
+		h.Clients[connKey] = ws
+	}
+	h.mu.Unlock()
 
 	messages, err := h.ChatService.GetChatHistory(r.Context(), msg.GroupID)
 	if err != nil {
 		ws.WriteJSON("error to loading history")
 	} else {
-
 		for _, msg := range messages {
 			message := fmt.Sprintf("%v: %v\t %v", msg.User, msg.Content, msg.Time.Format("2006-01-02 15:04:05"))
 			ws.WriteMessage(websocket.TextMessage, []byte(message))
@@ -95,7 +101,6 @@ func (h *WebSocketHandler) HandleConnections(w http.ResponseWriter, r *http.Requ
 			return
 		}
 		msg.Content = string(text)
-
 		if err := h.ChatService.SaveMessage(r.Context(), msg); err != nil {
 			logs.Errorf("error reading message: %v", err)
 			continue
@@ -105,13 +110,27 @@ func (h *WebSocketHandler) HandleConnections(w http.ResponseWriter, r *http.Requ
 }
 
 func (h *WebSocketHandler) broadcastMessage(msg models.Message) {
-	for client := range h.Clients {
-		message := fmt.Sprintf("%v: %v\t %v", msg.User, msg.Content, msg.Time.Format("2006-01-02 15:04:05"))
-		err := client.WriteMessage(websocket.TextMessage, []byte(message))
+	message := fmt.Sprintf("%v: %v\t %v", msg.User, msg.Content, msg.Time.Format("2006-01-02 15:04:05"))
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	for connKey, conn := range h.Clients {
+		err := conn.WriteMessage(websocket.TextMessage, []byte(message))
 		if err != nil {
 			logs.Errorf("error sending message: %v", err)
-			client.Close()
-			delete(h.Clients, client)
+			conn.Close()
+			delete(h.Clients, connKey)
 		}
 	}
+}
+
+func (h *WebSocketHandler) NotifyUserDisconnect(userLogin, groupID string) {
+	connKey := fmt.Sprintf("%s_%s", userLogin, groupID)
+
+	h.mu.Lock()
+	if conn, ok := h.Clients[connKey]; ok {
+		conn.WriteMessage(websocket.TextMessage, []byte("You are not a member of this group anymore"))
+		conn.Close()
+		delete(h.Clients, connKey)
+	}
+	h.mu.Unlock()
 }
