@@ -16,18 +16,18 @@ type InvitationToken struct {
 	jwt.StandardClaims
 }
 
-type Invitation struct{
-	Invite_ID	primitive.ObjectID `bson:"_id,omitempty"`
-	Receiver string `bson:"receiver"`
-	Sender	string	`bson:"sender"`
-	GroupID primitive.ObjectID `bson:"group_id"`
-	GroupName string `bson:"group_name"`
-	Token string `bson:"token"`
-	IsUsed bool `bson:"isUsed"`
+type Invitation struct {
+	Invite_ID primitive.ObjectID `bson:"_id,omitempty"`
+	Receiver  string             `bson:"receiver"`
+	Sender    string             `bson:"sender"`
+	GroupID   primitive.ObjectID `bson:"group_id"`
+	GroupName string             `bson:"group_name"`
+	Token     string             `bson:"token"`
+	IsUsed    bool               `bson:"isUsed"`
 }
 
-type InvitationList struct{
-	Invite_ID	primitive.ObjectID
+type InvitationList struct {
+	Invite_ID      primitive.ObjectID
 	InvitationText string
 	InvitationLink string
 }

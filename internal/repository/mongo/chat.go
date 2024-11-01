@@ -21,7 +21,7 @@ func NewChatRepository(db *mongo.Client) *ChatRepo {
 
 func (r *ChatRepo) InsertMessage(ctx context.Context, msg models.Message) error {
 	_, err := r.ChatColl.InsertOne(ctx, msg)
-	if err != nil{
+	if err != nil {
 		return fmt.Errorf("InsertMessage error: %v", err)
 	}
 	return nil

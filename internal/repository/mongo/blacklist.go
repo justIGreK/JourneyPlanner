@@ -27,7 +27,7 @@ func (r *MongoBlacklistRepo) CreateBlacklist(ctx context.Context, groupID string
 		Blacklist: []string{},
 	}
 	_, err = r.BlacklistColl.InsertOne(ctx, blacklist)
-	if err !=nil{
+	if err != nil {
 		return fmt.Errorf("CreateBlacklist error: %v", err)
 	}
 	return nil

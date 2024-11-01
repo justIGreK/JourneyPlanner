@@ -53,19 +53,19 @@ type WsHandler interface {
 }
 
 type Handler struct {
-	Poll      PollService
-	Task      TaskService
-	User      UserService
-	Group     GroupService
+	Poll  PollService
+	Task  TaskService
+	User  UserService
+	Group GroupService
 }
 
 func NewHandler(pollService PollService, taskService TaskService,
 	userService UserService, groupService GroupService) *Handler {
 	return &Handler{
-		Poll:      pollService,
-		Task:      taskService,
-		User:      userService,
-		Group:     groupService,
+		Poll:  pollService,
+		Task:  taskService,
+		User:  userService,
+		Group: groupService,
 	}
 }
 
@@ -79,7 +79,7 @@ func (h *Handler) InitRoutes(wsHandler WsHandler) *chi.Mux {
 	})
 	r.Route("/groups", func(r chi.Router) {
 		r.Use(h.AuthMiddleware)
-		r.Get("/ws", wsHandler.HandleConnections)	
+		r.Get("/ws", wsHandler.HandleConnections)
 		r.Post("/add", h.AddGroup)
 		r.Get("/getlist", h.GetGroups)
 		r.Get("/getgroupinfo", h.GetGroupInfo)

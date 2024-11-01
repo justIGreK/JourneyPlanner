@@ -9,7 +9,7 @@ type Message struct {
 	Time    time.Time `bson:"time"`
 }
 
-type UserConn struct{
-	UserLogin string 
-	GroupID string
+type UserConn struct {
+	UserLogin string
+	GroupID   string
 }

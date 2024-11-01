@@ -19,7 +19,7 @@ func NewMongoInviteRepo(db *mongo.Client) *MongoInviteRepo {
 
 func (r *MongoInviteRepo) AddInvitation(ctx context.Context, invite models.Invitation) error {
 	_, err := r.InviteColl.InsertOne(ctx, invite)
-	if err !=nil{
+	if err != nil {
 		return fmt.Errorf("AddInvitation error: %v", err)
 	}
 	return nil

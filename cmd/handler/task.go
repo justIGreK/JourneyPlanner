@@ -19,10 +19,10 @@ import (
 // @Router /tasks/add [post]
 func (h *Handler) AddTask(w http.ResponseWriter, r *http.Request) {
 	userLogin, ok := r.Context().Value(UserLoginKey).(string)
-	if !ok{
+	if !ok {
 		logs.Error("failed to get value from context")
 		http.Error(w, "Forbidden", http.StatusForbidden)
-        return
+		return
 	}
 	var durDays int
 	var durHours int
@@ -97,10 +97,10 @@ func (h *Handler) AddTask(w http.ResponseWriter, r *http.Request) {
 // @Router /tasks/getlist [get]
 func (h *Handler) GetTasks(w http.ResponseWriter, r *http.Request) {
 	userLogin, ok := r.Context().Value(UserLoginKey).(string)
-	if !ok{
+	if !ok {
 		logs.Error("failed to get value from context")
 		http.Error(w, "Forbidden", http.StatusForbidden)
-        return
+		return
 	}
 	groupID := r.URL.Query().Get("group_id")
 	tasks, err := h.Task.GetTaskList(r.Context(), groupID, userLogin)
@@ -123,7 +123,7 @@ func (h *Handler) GetTasks(w http.ResponseWriter, r *http.Request) {
 		"tasks": tasks,
 	}
 	w.Header().Set("Content-Type", "application/json")
-	err =json.NewEncoder(w).Encode(response)
+	err = json.NewEncoder(w).Encode(response)
 	if err != nil {
 		logs.Error("failed to encode JSON: %v", err)
 		http.Error(w, "Failed to encode JSON response", http.StatusInternalServerError)
@@ -144,10 +144,10 @@ func (h *Handler) GetTasks(w http.ResponseWriter, r *http.Request) {
 // @Router /tasks/update [put]
 func (h *Handler) UpdateTask(w http.ResponseWriter, r *http.Request) {
 	userLogin, ok := r.Context().Value(UserLoginKey).(string)
-	if !ok{
+	if !ok {
 		logs.Error("failed to get value from context")
 		http.Error(w, "Forbidden", http.StatusForbidden)
-        return
+		return
 	}
 	taskID := r.URL.Query().Get("task_id")
 	var durDays int
@@ -227,10 +227,10 @@ func (h *Handler) UpdateTask(w http.ResponseWriter, r *http.Request) {
 // @Router /tasks/delete [delete]
 func (h *Handler) DeleteTask(w http.ResponseWriter, r *http.Request) {
 	userLogin, ok := r.Context().Value(UserLoginKey).(string)
-	if !ok{
+	if !ok {
 		logs.Error("failed to get value from context")
 		http.Error(w, "Forbidden", http.StatusForbidden)
-        return
+		return
 	}
 	groupID := r.URL.Query().Get("group_id")
 	taskID := r.URL.Query().Get("task_id")

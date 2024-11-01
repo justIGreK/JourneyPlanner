@@ -157,7 +157,7 @@ func (s *GroupSrv) UnbanMember(ctx context.Context, groupID, memberLogin, userLo
 		return errors.New("you have no permissions to do this")
 	}
 	blacklist, err := s.BlackList.GetBlacklist(ctx, groupID)
-	if err != nil{
+	if err != nil {
 		logs.Error(err)
 		return errors.New("failed to unban user")
 	}

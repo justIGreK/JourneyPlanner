@@ -24,14 +24,14 @@ func SetLogger(l *zap.Logger) {
 // @Router /groups/add [post]
 func (h *Handler) AddGroup(w http.ResponseWriter, r *http.Request) {
 	userLogin, ok := r.Context().Value(UserLoginKey).(string)
-	if !ok{
+	if !ok {
 		logs.Error("failed to get value from context")
 		http.Error(w, "Forbidden", http.StatusForbidden)
-        return
+		return
 	}
-	name :=  r.URL.Query().Get("name")
+	name := r.URL.Query().Get("name")
 	name = strings.TrimSpace(name)
-	if name == ""{
+	if name == "" {
 		http.Error(w, "Invalid name", http.StatusBadRequest)
 		return
 	}
@@ -58,10 +58,10 @@ func (h *Handler) AddGroup(w http.ResponseWriter, r *http.Request) {
 // @Router /groups/getlist [get]
 func (h *Handler) GetGroups(w http.ResponseWriter, r *http.Request) {
 	userLogin, ok := r.Context().Value(UserLoginKey).(string)
-	if !ok{
+	if !ok {
 		logs.Error("failed to get value from context")
 		http.Error(w, "Forbidden", http.StatusForbidden)
-        return
+		return
 	}
 	groups, err := h.Group.GetGroupList(r.Context(), userLogin)
 	if err != nil {
@@ -89,10 +89,10 @@ func (h *Handler) GetGroups(w http.ResponseWriter, r *http.Request) {
 // @Router /groups/getgroupinfo [get]
 func (h *Handler) GetGroupInfo(w http.ResponseWriter, r *http.Request) {
 	userLogin, ok := r.Context().Value(UserLoginKey).(string)
-	if !ok{
+	if !ok {
 		logs.Error("failed to get value from context")
 		http.Error(w, "Forbidden", http.StatusForbidden)
-        return
+		return
 	}
 	groupId := r.URL.Query().Get("group_id")
 	groupDetails, err := h.Group.GetGroupByID(r.Context(), groupId, userLogin)
@@ -121,10 +121,10 @@ func (h *Handler) GetGroupInfo(w http.ResponseWriter, r *http.Request) {
 // @Router /groups/blacklist [get]
 func (h *Handler) GetBlacklist(w http.ResponseWriter, r *http.Request) {
 	userLogin, ok := r.Context().Value(UserLoginKey).(string)
-	if !ok{
+	if !ok {
 		logs.Error("failed to get value from context")
 		http.Error(w, "Forbidden", http.StatusForbidden)
-        return
+		return
 	}
 	groupId := r.URL.Query().Get("group_id")
 	blacklist, err := h.Group.GetBlacklist(r.Context(), groupId, userLogin)
@@ -154,10 +154,10 @@ func (h *Handler) GetBlacklist(w http.ResponseWriter, r *http.Request) {
 // @Router /groups/ban [put]
 func (h *Handler) BanMember(w http.ResponseWriter, r *http.Request) {
 	userLogin, ok := r.Context().Value(UserLoginKey).(string)
-	if !ok{
+	if !ok {
 		logs.Error("failed to get value from context")
 		http.Error(w, "Forbidden", http.StatusForbidden)
-        return
+		return
 	}
 	groupId := r.URL.Query().Get("group_id")
 	member := r.URL.Query().Get("memberLogin")
@@ -188,10 +188,10 @@ func (h *Handler) BanMember(w http.ResponseWriter, r *http.Request) {
 // @Router /groups/unban [put]
 func (h *Handler) UnbanMember(w http.ResponseWriter, r *http.Request) {
 	userLogin, ok := r.Context().Value(UserLoginKey).(string)
-	if !ok{
+	if !ok {
 		logs.Error("failed to get value from context")
 		http.Error(w, "Forbidden", http.StatusForbidden)
-        return
+		return
 	}
 	groupId := r.URL.Query().Get("group_id")
 	member := r.URL.Query().Get("memberLogin")
@@ -217,10 +217,10 @@ func (h *Handler) UnbanMember(w http.ResponseWriter, r *http.Request) {
 // @Router /groups/leaveGroup [post]
 func (h *Handler) LeaveFromGroup(w http.ResponseWriter, r *http.Request) {
 	userLogin, ok := r.Context().Value(UserLoginKey).(string)
-	if !ok{
+	if !ok {
 		logs.Error("failed to get value from context")
 		http.Error(w, "Forbidden", http.StatusForbidden)
-        return
+		return
 	}
 	groupId := r.URL.Query().Get("group_id")
 	err := h.Group.LeaveGroup(r.Context(), groupId, userLogin)
@@ -241,10 +241,10 @@ func (h *Handler) LeaveFromGroup(w http.ResponseWriter, r *http.Request) {
 // @Router /groups/givelead [put]
 func (h *Handler) ChangeLeader(w http.ResponseWriter, r *http.Request) {
 	userLogin, ok := r.Context().Value(UserLoginKey).(string)
-	if !ok{
+	if !ok {
 		logs.Error("failed to get value from context")
 		http.Error(w, "Forbidden", http.StatusForbidden)
-        return
+		return
 	}
 	groupId := r.URL.Query().Get("group_id")
 	memberLogin := r.URL.Query().Get("user_login")
@@ -265,10 +265,10 @@ func (h *Handler) ChangeLeader(w http.ResponseWriter, r *http.Request) {
 // @Router /groups/delete [delete]
 func (h *Handler) DeleteGroup(w http.ResponseWriter, r *http.Request) {
 	userLogin, ok := r.Context().Value(UserLoginKey).(string)
-	if !ok{
+	if !ok {
 		logs.Error("failed to get value from context")
 		http.Error(w, "Forbidden", http.StatusForbidden)
-        return
+		return
 	}
 	groupId := r.URL.Query().Get("group_id")
 	err := h.Group.DeleteGroup(r.Context(), groupId, userLogin)
@@ -289,10 +289,10 @@ func (h *Handler) DeleteGroup(w http.ResponseWriter, r *http.Request) {
 // @Router /groups/invite [post]
 func (h *Handler) Invite(w http.ResponseWriter, r *http.Request) {
 	userLogin, ok := r.Context().Value(UserLoginKey).(string)
-	if !ok{
+	if !ok {
 		logs.Error("failed to get value from context")
 		http.Error(w, "Forbidden", http.StatusForbidden)
-        return
+		return
 	}
 	inviteDetails := models.CreateInvite{
 		GroupID: r.URL.Query().Get("group_id"),
@@ -325,10 +325,10 @@ func (h *Handler) Invite(w http.ResponseWriter, r *http.Request) {
 // @Router /groups/invitelist [get]
 func (h *Handler) GetInviteList(w http.ResponseWriter, r *http.Request) {
 	userLogin, ok := r.Context().Value(UserLoginKey).(string)
-	if !ok{
+	if !ok {
 		logs.Error("failed to get value from context")
 		http.Error(w, "Forbidden", http.StatusForbidden)
-        return
+		return
 	}
 	invites, err := h.Group.GetInviteList(r.Context(), userLogin)
 	if err != nil {
@@ -366,10 +366,10 @@ func (h *Handler) GetInviteList(w http.ResponseWriter, r *http.Request) {
 // @Router /groups/declineinvite [post]
 func (h *Handler) DeclineInvite(w http.ResponseWriter, r *http.Request) {
 	userLogin, ok := r.Context().Value(UserLoginKey).(string)
-	if !ok{
+	if !ok {
 		logs.Error("failed to get value from context")
 		http.Error(w, "Forbidden", http.StatusForbidden)
-        return
+		return
 	}
 	inviteID := r.URL.Query().Get("invite_id")
 	err := h.Group.DeclineInvite(r.Context(), userLogin, inviteID)

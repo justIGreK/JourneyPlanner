@@ -22,10 +22,10 @@ const noDuration = 15770000 // if selected no duration, poll will be active for 
 // @Router /polls/add [post]
 func (h *Handler) CreatePoll(w http.ResponseWriter, r *http.Request) {
 	userLogin, ok := r.Context().Value(UserLoginKey).(string)
-	if !ok{
+	if !ok {
 		logs.Error("failed to get value from context")
 		http.Error(w, "Forbidden", http.StatusForbidden)
-        return
+		return
 	}
 	var duration uint64
 	var err error
@@ -36,7 +36,7 @@ func (h *Handler) CreatePoll(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "InvalidTime: "+err.Error(), http.StatusBadRequest)
 			return
 		}
-	}else {
+	} else {
 		duration = noDuration
 	}
 	pollInfo := models.CreatePoll{
@@ -72,10 +72,10 @@ func (h *Handler) CreatePoll(w http.ResponseWriter, r *http.Request) {
 // @Router /polls/getlist [get]
 func (h *Handler) GetPolls(w http.ResponseWriter, r *http.Request) {
 	userLogin, ok := r.Context().Value(UserLoginKey).(string)
-	if !ok{
+	if !ok {
 		logs.Error("failed to get value from context")
 		http.Error(w, "Forbidden", http.StatusForbidden)
-        return
+		return
 	}
 	groupID := r.URL.Query().Get("groupID")
 	polls, err := h.Poll.GetPollList(r.Context(), groupID, userLogin)
@@ -105,10 +105,10 @@ func (h *Handler) GetPolls(w http.ResponseWriter, r *http.Request) {
 // @Router /polls/delete [delete]
 func (h *Handler) DeletePoll(w http.ResponseWriter, r *http.Request) {
 	userLogin, ok := r.Context().Value(UserLoginKey).(string)
-	if !ok{
+	if !ok {
 		logs.Error("failed to get value from context")
 		http.Error(w, "Forbidden", http.StatusForbidden)
-        return
+		return
 	}
 	groupID := r.URL.Query().Get("groupID")
 	pollID := r.URL.Query().Get("pollID")
@@ -136,10 +136,10 @@ func (h *Handler) DeletePoll(w http.ResponseWriter, r *http.Request) {
 // @Router /polls/close [put]
 func (h *Handler) ClosePoll(w http.ResponseWriter, r *http.Request) {
 	userLogin, ok := r.Context().Value(UserLoginKey).(string)
-	if !ok{
+	if !ok {
 		logs.Error("failed to get value from context")
 		http.Error(w, "Forbidden", http.StatusForbidden)
-        return
+		return
 	}
 	groupID := r.URL.Query().Get("groupID")
 	pollID := r.URL.Query().Get("pollID")
@@ -157,8 +157,6 @@ func (h *Handler) ClosePoll(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-
-
 // @Summary Vote Poll
 // @Tags polls
 // @Description Vote for poll option
@@ -170,15 +168,15 @@ func (h *Handler) ClosePoll(w http.ResponseWriter, r *http.Request) {
 // @Router /polls/vote [put]
 func (h *Handler) VotePoll(w http.ResponseWriter, r *http.Request) {
 	userLogin, ok := r.Context().Value(UserLoginKey).(string)
-	if !ok{
+	if !ok {
 		logs.Error("failed to get value from context")
 		http.Error(w, "Forbidden", http.StatusForbidden)
-        return
+		return
 	}
 	vote := models.AddVote{
 		GroupID: r.URL.Query().Get("groupID"),
-		PollID: r.URL.Query().Get("pollID"),
-		Option: r.URL.Query().Get("option"),
+		PollID:  r.URL.Query().Get("pollID"),
+		Option:  r.URL.Query().Get("option"),
 	}
 	err := h.Poll.VotePoll(r.Context(), userLogin, vote)
 	if err != nil {
@@ -193,8 +191,3 @@ func (h *Handler) VotePoll(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 }
-
-
-
-
-

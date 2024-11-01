@@ -27,7 +27,7 @@ func NewMongoGroupRepo(db *mongo.Client) *MongoGroupRepo {
 
 func (r *MongoGroupRepo) CreateGroup(ctx context.Context, group models.Group) (string, error) {
 	result, err := r.GroupColl.InsertOne(ctx, group)
-	if err !=nil {
+	if err != nil {
 		return "", fmt.Errorf("CreateGroup: %v", err)
 	}
 	return result.InsertedID.(primitive.ObjectID).Hex(), nil

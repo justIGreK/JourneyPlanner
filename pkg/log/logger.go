@@ -7,8 +7,8 @@ var logger *zap.Logger
 func init() {
 	var err error
 	loggerConfig := zap.NewProductionConfig()
-	loggerConfig.EncoderConfig.StacktraceKey = "" 
-    logger, err = loggerConfig.Build()
+	loggerConfig.EncoderConfig.StacktraceKey = ""
+	logger, err = loggerConfig.Build()
 	if err != nil {
 		panic(err)
 	}

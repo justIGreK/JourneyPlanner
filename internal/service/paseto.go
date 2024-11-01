@@ -23,7 +23,7 @@ func (s *UserSrv) GeneratePasetoToken(userLogin string) (string, error) {
 	}
 
 	encrypted, err := pasetoInstance.Encrypt(symmetricKey, payload, nil)
-	if err != nil{
+	if err != nil {
 		logs.Error(err)
 		return "", fmt.Errorf("GeneratePasetoToken error: %v", err)
 	}
