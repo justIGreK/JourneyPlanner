@@ -19,11 +19,15 @@ func (s *UserSrv) GeneratePasetoToken(userLogin string) (string, error) {
 	symmetricKey := []byte(os.Getenv("SYMMETRIC_KEY"))
 	payload := TokenPayload{
 		UserLogin:  userLogin,
-		Expiration: time.Now().Add(24 * time.Hour),
+		Expiration: time.Now().Add(HoursInDay * time.Hour),
 	}
 
 	encrypted, err := pasetoInstance.Encrypt(symmetricKey, payload, nil)
-	return encrypted, err
+	if err != nil{
+		logs.Error(err)
+		return "", fmt.Errorf("GeneratePasetoToken error: %v", err)
+	}
+	return encrypted, nil
 }
 
 func (s *UserSrv) ValidatePasetoToken(tokenString string) (*TokenPayload, error) {
@@ -32,7 +36,8 @@ func (s *UserSrv) ValidatePasetoToken(tokenString string) (*TokenPayload, error)
 	var footer string
 	err := pasetoInstance.Decrypt(tokenString, symmetricKey, &payload, &footer)
 	if err != nil {
-		return nil, err
+		logs.Error(err)
+		return nil, fmt.Errorf("validatePasetoToken error: %v", err)
 	}
 
 	if time.Now().After(payload.Expiration) {

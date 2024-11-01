@@ -21,7 +21,12 @@ const noDuration = 15770000 // if selected no duration, poll will be active for 
 // @Param duration query uint false "duration of poll in minutes" minimum(0)
 // @Router /polls/add [post]
 func (h *Handler) CreatePoll(w http.ResponseWriter, r *http.Request) {
-	userLogin := r.Context().Value(UserLoginKey).(string)
+	userLogin, ok := r.Context().Value(UserLoginKey).(string)
+	if !ok{
+		logs.Error("failed to get value from context")
+		http.Error(w, "Forbidden", http.StatusForbidden)
+        return
+	}
 	var duration uint64
 	var err error
 	durationStr := r.URL.Query().Get("duration")
@@ -45,14 +50,17 @@ func (h *Handler) CreatePoll(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Validation failed: "+err.Error(), http.StatusBadRequest)
 		return
 	}
-
 	err = h.Poll.CreatePoll(r.Context(), pollInfo, userLogin)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-
-	json.NewEncoder(w).Encode("Poll is created")
+	err = json.NewEncoder(w).Encode("Poll is created")
+	if err != nil {
+		logs.Error("failed to encode JSON: %v", err)
+		http.Error(w, "Failed to encode JSON response", http.StatusInternalServerError)
+		return
+	}
 }
 
 // @Summary GetPolls
@@ -63,7 +71,12 @@ func (h *Handler) CreatePoll(w http.ResponseWriter, r *http.Request) {
 // @Param groupID query string true "id of group"
 // @Router /polls/getlist [get]
 func (h *Handler) GetPolls(w http.ResponseWriter, r *http.Request) {
-	userLogin := r.Context().Value(UserLoginKey).(string)
+	userLogin, ok := r.Context().Value(UserLoginKey).(string)
+	if !ok{
+		logs.Error("failed to get value from context")
+		http.Error(w, "Forbidden", http.StatusForbidden)
+        return
+	}
 	groupID := r.URL.Query().Get("groupID")
 	polls, err := h.Poll.GetPollList(r.Context(), groupID, userLogin)
 	if err != nil {
@@ -74,7 +87,12 @@ func (h *Handler) GetPolls(w http.ResponseWriter, r *http.Request) {
 		"polls": polls,
 	}
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(response)
+	err = json.NewEncoder(w).Encode(response)
+	if err != nil {
+		logs.Error("failed to encode JSON: %v", err)
+		http.Error(w, "Failed to encode JSON response", http.StatusInternalServerError)
+		return
+	}
 }
 
 // @Summary Delete Poll
@@ -86,7 +104,12 @@ func (h *Handler) GetPolls(w http.ResponseWriter, r *http.Request) {
 // @Param pollID query string true "id of poll"
 // @Router /polls/delete [delete]
 func (h *Handler) DeletePoll(w http.ResponseWriter, r *http.Request) {
-	userLogin := r.Context().Value(UserLoginKey).(string)
+	userLogin, ok := r.Context().Value(UserLoginKey).(string)
+	if !ok{
+		logs.Error("failed to get value from context")
+		http.Error(w, "Forbidden", http.StatusForbidden)
+        return
+	}
 	groupID := r.URL.Query().Get("groupID")
 	pollID := r.URL.Query().Get("pollID")
 	err := h.Poll.DeletePollByID(r.Context(), pollID, groupID, userLogin)
@@ -95,7 +118,12 @@ func (h *Handler) DeletePoll(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode("Done")
+	err = json.NewEncoder(w).Encode("Done")
+	if err != nil {
+		logs.Error("failed to encode JSON: %v", err)
+		http.Error(w, "Failed to encode JSON response", http.StatusInternalServerError)
+		return
+	}
 }
 
 // @Summary Close Poll
@@ -107,7 +135,12 @@ func (h *Handler) DeletePoll(w http.ResponseWriter, r *http.Request) {
 // @Param pollID query string true "id of poll"
 // @Router /polls/close [put]
 func (h *Handler) ClosePoll(w http.ResponseWriter, r *http.Request) {
-	userLogin := r.Context().Value(UserLoginKey).(string)
+	userLogin, ok := r.Context().Value(UserLoginKey).(string)
+	if !ok{
+		logs.Error("failed to get value from context")
+		http.Error(w, "Forbidden", http.StatusForbidden)
+        return
+	}
 	groupID := r.URL.Query().Get("groupID")
 	pollID := r.URL.Query().Get("pollID")
 	err := h.Poll.ClosePoll(r.Context(), pollID, groupID, userLogin)
@@ -116,7 +149,12 @@ func (h *Handler) ClosePoll(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode("Done")
+	err = json.NewEncoder(w).Encode("Done")
+	if err != nil {
+		logs.Error("failed to encode JSON: %v", err)
+		http.Error(w, "Failed to encode JSON response", http.StatusInternalServerError)
+		return
+	}
 }
 
 
@@ -131,7 +169,12 @@ func (h *Handler) ClosePoll(w http.ResponseWriter, r *http.Request) {
 // @Param option query string true "vote option" Enums(firstOption, secondOption)
 // @Router /polls/vote [put]
 func (h *Handler) VotePoll(w http.ResponseWriter, r *http.Request) {
-	userLogin := r.Context().Value(UserLoginKey).(string)
+	userLogin, ok := r.Context().Value(UserLoginKey).(string)
+	if !ok{
+		logs.Error("failed to get value from context")
+		http.Error(w, "Forbidden", http.StatusForbidden)
+        return
+	}
 	vote := models.AddVote{
 		GroupID: r.URL.Query().Get("groupID"),
 		PollID: r.URL.Query().Get("pollID"),
@@ -143,7 +186,12 @@ func (h *Handler) VotePoll(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode("Done")
+	err = json.NewEncoder(w).Encode("Done")
+	if err != nil {
+		logs.Error("failed to encode JSON: %v", err)
+		http.Error(w, "Failed to encode JSON response", http.StatusInternalServerError)
+		return
+	}
 }
 
 

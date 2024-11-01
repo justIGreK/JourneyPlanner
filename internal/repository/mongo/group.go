@@ -3,7 +3,7 @@ package mongorepo
 import (
 	"JourneyPlanner/internal/models"
 	"context"
-	"errors"
+	"fmt"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -27,7 +27,10 @@ func NewMongoGroupRepo(db *mongo.Client) *MongoGroupRepo {
 
 func (r *MongoGroupRepo) CreateGroup(ctx context.Context, group models.Group) (string, error) {
 	result, err := r.GroupColl.InsertOne(ctx, group)
-	return  result.InsertedID.(primitive.ObjectID).Hex(), err
+	if err !=nil {
+		return "", fmt.Errorf("CreateGroup: %v", err)
+	}
+	return result.InsertedID.(primitive.ObjectID).Hex(), nil
 }
 
 func (r *MongoGroupRepo) GetGroupList(ctx context.Context, userLogin string) ([]models.Group, error) {
@@ -40,12 +43,11 @@ func (r *MongoGroupRepo) GetGroupList(ctx context.Context, userLogin string) ([]
 	}
 	cursor, err := r.GroupColl.Find(ctx, filter)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("GetGroupList error: %v", err)
 	}
 	err = cursor.All(ctx, &groupList)
 	if err != nil {
-		logs.Error("cursorAll", err)
-		return nil, err
+		return nil, fmt.Errorf("cursorAll: %v", err)
 	}
 	return groupList, nil
 }
@@ -53,7 +55,7 @@ func (r *MongoGroupRepo) GetGroupList(ctx context.Context, userLogin string) ([]
 func (r *MongoGroupRepo) GetGroup(ctx context.Context, groupID string, userLogin ...string) (*models.Group, error) {
 	oid, err := convertToObjectIDs(groupID)
 	if err != nil {
-		return nil, errors.New("InvalidID")
+		return nil, fmt.Errorf("InvalidID: %v", err)
 	}
 	var group models.Group
 
@@ -73,8 +75,7 @@ func (r *MongoGroupRepo) GetGroup(ctx context.Context, groupID string, userLogin
 		if err == mongo.ErrNoDocuments {
 			return nil, nil
 		}
-		logs.Errorf("GetGroupById error %v", err)
-		return nil, err
+		return nil, fmt.Errorf("GetGroupById error: %v", err)
 	}
 	return &group, nil
 }
@@ -82,7 +83,7 @@ func (r *MongoGroupRepo) GetGroup(ctx context.Context, groupID string, userLogin
 func (r *MongoGroupRepo) ChangeGroupLeader(ctx context.Context, groupID, userLogin string) error {
 	oid, err := convertToObjectIDs(groupID)
 	if err != nil {
-		return errors.New("InvalidID")
+		return fmt.Errorf("InvalidID: %v", err)
 	}
 	filter := bson.M{
 		"$and": []bson.M{
@@ -93,8 +94,7 @@ func (r *MongoGroupRepo) ChangeGroupLeader(ctx context.Context, groupID, userLog
 	update := bson.M{"$set": bson.M{"leader_login": userLogin}}
 	_, err = r.GroupColl.UpdateOne(ctx, filter, update)
 	if err != nil {
-		logs.Error("ChangeGroupLeader error", err)
-		return err
+		return fmt.Errorf("ChangeGroupLeader error: %v", err)
 	}
 
 	return nil
@@ -103,7 +103,7 @@ func (r *MongoGroupRepo) ChangeGroupLeader(ctx context.Context, groupID, userLog
 func (r *MongoGroupRepo) DeleteGroup(ctx context.Context, groupID string) error {
 	oid, err := convertToObjectIDs(groupID)
 	if err != nil {
-		return errors.New("InvalidID")
+		return fmt.Errorf("InvalidID: %v", err)
 	}
 	filter := bson.M{
 		"$and": []bson.M{
@@ -114,8 +114,7 @@ func (r *MongoGroupRepo) DeleteGroup(ctx context.Context, groupID string) error 
 	update := bson.M{"$set": bson.M{"isActive": false}}
 	_, err = r.GroupColl.UpdateOne(ctx, filter, update)
 	if err != nil {
-		logs.Error("DeleteGroup error", err)
-		return err
+		return fmt.Errorf("DeleteGroup error: %v", err)
 	}
 	return nil
 }
@@ -123,7 +122,7 @@ func (r *MongoGroupRepo) DeleteGroup(ctx context.Context, groupID string) error 
 func (r *MongoGroupRepo) LeaveGroup(ctx context.Context, groupID, userLogin string) error {
 	oid, err := convertToObjectIDs(groupID)
 	if err != nil {
-		return errors.New("InvalidID")
+		return fmt.Errorf("InvalidID: %v", err)
 	}
 	filter := bson.M{
 		"$and": []bson.M{
@@ -138,8 +137,7 @@ func (r *MongoGroupRepo) LeaveGroup(ctx context.Context, groupID, userLogin stri
 	}
 	_, err = r.GroupColl.UpdateOne(ctx, filter, update)
 	if err != nil {
-		logs.Error("LeaveGroup error", err)
-		return err
+		return fmt.Errorf("LeaveGroup error: %v", err)
 	}
 
 	return nil
@@ -148,7 +146,7 @@ func (r *MongoGroupRepo) LeaveGroup(ctx context.Context, groupID, userLogin stri
 func (r *MongoGroupRepo) JoinGroup(ctx context.Context, groupID, userLogin string) error {
 	oid, err := convertToObjectIDs(groupID)
 	if err != nil {
-		return errors.New("InvalidID")
+		return fmt.Errorf("InvalidID: %v", err)
 	}
 	filter := bson.M{
 		"$and": []bson.M{
@@ -163,8 +161,7 @@ func (r *MongoGroupRepo) JoinGroup(ctx context.Context, groupID, userLogin strin
 	}
 	_, err = r.GroupColl.UpdateOne(ctx, filter, update)
 	if err != nil {
-		logs.Error("LeaveGroup error", err)
-		return err
+		return fmt.Errorf("Join group error: %v", err)
 	}
 
 	return nil

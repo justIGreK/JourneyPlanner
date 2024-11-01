@@ -66,7 +66,6 @@ func NewHandler(pollService PollService, taskService TaskService,
 		Task:      taskService,
 		User:      userService,
 		Group:     groupService,
-	
 	}
 }
 

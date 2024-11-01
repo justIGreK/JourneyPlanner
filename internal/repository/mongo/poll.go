@@ -3,7 +3,7 @@ package mongorepo
 import (
 	"JourneyPlanner/internal/models"
 	"context"
-	"errors"
+	"fmt"
 	"time"
 
 	"go.mongodb.org/mongo-driver/bson"
@@ -21,29 +21,30 @@ func NewMongoPollRepo(db *mongo.Client) *MongoPollRepo {
 func (r *MongoPollRepo) CreatePoll(ctx context.Context, poll models.Poll, groupID string) error {
 	oid, err := convertToObjectIDs(groupID)
 	if err != nil {
-		return errors.New("InvalidID")
+		return fmt.Errorf("InvalidID: %v", err)
 	}
 	poll.GroupID = oid[0]
 	_, err = r.PollColl.InsertOne(ctx, poll)
-	return err
+	if err != nil {
+		return fmt.Errorf("CreatePoll error: %v", err)
+	}
+	return nil
 }
 
 func (r *MongoPollRepo) GetPollList(ctx context.Context, groupID string) ([]models.Poll, []models.Poll, error) {
 	oid, err := convertToObjectIDs(groupID)
 	if err != nil {
-		return nil, nil, errors.New("InvalidID")
+		return nil, nil, fmt.Errorf("InvalidID: %v", err)
 	}
 	now := time.Now().UTC()
 	getPolls := func(filter bson.M) ([]models.Poll, error) {
 		cursor, err := r.PollColl.Find(ctx, filter)
 		if err != nil {
-			logs.Error("GetPollList error", err)
-			return nil, err
+			return nil, fmt.Errorf("GetPollList error: %v", err)
 		}
 		var polls []models.Poll
 		if err := cursor.All(ctx, &polls); err != nil {
-			logs.Error("GetPollList error, cursor.All()", err)
-			return nil, err
+			return nil, fmt.Errorf("GetPollList error, cursor.All(): %v", err)
 		}
 		return polls, nil
 	}
@@ -73,7 +74,7 @@ func (r *MongoPollRepo) GetPollList(ctx context.Context, groupID string) ([]mode
 func (r *MongoPollRepo) GetPollById(ctx context.Context, pollID string) (*models.Poll, error) {
 	oid, err := convertToObjectIDs(pollID)
 	if err != nil {
-		return nil, errors.New("InvalidID")
+		return nil, fmt.Errorf("InvalidID: %v", err)
 	}
 	var poll models.Poll
 	filter := bson.M{
@@ -81,8 +82,7 @@ func (r *MongoPollRepo) GetPollById(ctx context.Context, pollID string) (*models
 	}
 	err = r.PollColl.FindOne(ctx, filter).Decode(&poll)
 	if err != nil {
-		logs.Error("GetPollById error", err)
-		return nil, err
+		return nil, fmt.Errorf("GetPollById error: %v", err)
 	}
 	return &poll, nil
 }
@@ -90,7 +90,7 @@ func (r *MongoPollRepo) GetPollById(ctx context.Context, pollID string) (*models
 func (r *MongoPollRepo) ClosePoll(ctx context.Context, pollID string) error {
 	oid, err := convertToObjectIDs(pollID)
 	if err != nil {
-		return errors.New("InvalidID")
+		return fmt.Errorf("InvalidID: %v", err)
 	}
 	filter := bson.M{
 		"$and": []bson.M{
@@ -101,8 +101,7 @@ func (r *MongoPollRepo) ClosePoll(ctx context.Context, pollID string) error {
 	update := bson.M{"$set": bson.M{"isEarlyClosed": true}}
 	_, err = r.PollColl.UpdateOne(ctx, filter, update)
 	if err != nil {
-		logs.Error("ClosePoll error", err)
-		return err
+		return fmt.Errorf("ClosePoll error: %v", err)
 	}
 	return nil
 }
@@ -110,12 +109,12 @@ func (r *MongoPollRepo) ClosePoll(ctx context.Context, pollID string) error {
 func (r *MongoPollRepo) DeletePoll(ctx context.Context, pollID string) error {
 	oid, err := convertToObjectIDs(pollID)
 	if err != nil {
-		return errors.New("InvalidID")
+		return fmt.Errorf("InvalidID: %v", err)
 	}
 	filter := bson.M{"_id": oid[0]}
 	_, err = r.PollColl.DeleteOne(ctx, filter)
 	if err != nil {
-		return err
+		return fmt.Errorf("Delete poll error: %v", err)
 	}
 	return nil
 }
@@ -128,7 +127,7 @@ const (
 func (r *MongoPollRepo) AddVote(ctx context.Context, pollID, voteOption, userLogin string) error {
 	oid, err := convertToObjectIDs(pollID)
 	if err != nil {
-		return errors.New("InvalidID")
+		return fmt.Errorf("InvalidID: %v", err)
 	}
 	now := time.Now().UTC()
 	filter := bson.M{
@@ -138,29 +137,27 @@ func (r *MongoPollRepo) AddVote(ctx context.Context, pollID, voteOption, userLog
 			{"isEarlyClosed": false},
 		},
 	}
-	var update bson.M
-	if voteOption == firstOption {
-		update = bson.M{"$push": bson.M{
-			"votes1": userLogin,
-		}}
-	} else if voteOption == secondOption {
-		update = bson.M{"$push": bson.M{
-			"votes2": userLogin,
-		}}
-	} else {
-		return errors.New("unexpected error. Invalid voteOption")
+	var votesField string
+	switch voteOption {
+	case firstOption:
+		votesField = "votes1"
+	case secondOption:
+		votesField = "votes2"
+	default:
+		return fmt.Errorf("unexpected error: invalid vote option %v", voteOption)
 	}
+
+	update := bson.M{"$push": bson.M{votesField: userLogin}}
 	_, err = r.PollColl.UpdateOne(ctx, filter, update)
 	if err != nil {
-		logs.Error("ClosePoll error", err)
-		return err
+		return fmt.Errorf("ClosePoll error: %v", err)
 	}
 	return nil
 }
 func (r *MongoPollRepo) RemoveVote(ctx context.Context, pollID, userLogin string) error {
 	oid, err := convertToObjectIDs(pollID)
 	if err != nil {
-		return errors.New("InvalidID")
+		return fmt.Errorf("InvalidID: %v", err)
 	}
 	now := time.Now().UTC()
 	filter := bson.M{
@@ -177,8 +174,7 @@ func (r *MongoPollRepo) RemoveVote(ctx context.Context, pollID, userLogin string
 	}}
 	_, err = r.PollColl.UpdateOne(ctx, filter, update)
 	if err != nil {
-		logs.Error("ClosePoll error", err)
-		return err
+		return fmt.Errorf("Remove vote error: %v", err)
 	}
 	return nil
 }

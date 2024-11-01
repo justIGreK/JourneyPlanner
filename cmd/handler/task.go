@@ -18,7 +18,12 @@ import (
 // @Param duration query models.Duration true "Tasks duration"
 // @Router /tasks/add [post]
 func (h *Handler) AddTask(w http.ResponseWriter, r *http.Request) {
-	userLogin := r.Context().Value(UserLoginKey).(string)
+	userLogin, ok := r.Context().Value(UserLoginKey).(string)
+	if !ok{
+		logs.Error("failed to get value from context")
+		http.Error(w, "Forbidden", http.StatusForbidden)
+        return
+	}
 	var durDays int
 	var durHours int
 	var durMinutes int
@@ -75,7 +80,12 @@ func (h *Handler) AddTask(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode("Task is created")
+	err = json.NewEncoder(w).Encode("Task is created")
+	if err != nil {
+		logs.Error("failed to encode JSON: %v", err)
+		http.Error(w, "Failed to encode JSON response", http.StatusInternalServerError)
+		return
+	}
 }
 
 // @Summary GetTasks
@@ -86,7 +96,12 @@ func (h *Handler) AddTask(w http.ResponseWriter, r *http.Request) {
 // @Param group_id query string true "Id of group"
 // @Router /tasks/getlist [get]
 func (h *Handler) GetTasks(w http.ResponseWriter, r *http.Request) {
-	userLogin := r.Context().Value(UserLoginKey).(string)
+	userLogin, ok := r.Context().Value(UserLoginKey).(string)
+	if !ok{
+		logs.Error("failed to get value from context")
+		http.Error(w, "Forbidden", http.StatusForbidden)
+        return
+	}
 	groupID := r.URL.Query().Get("group_id")
 	tasks, err := h.Task.GetTaskList(r.Context(), groupID, userLogin)
 	if err != nil {
@@ -96,14 +111,24 @@ func (h *Handler) GetTasks(w http.ResponseWriter, r *http.Request) {
 
 	if len(tasks) == 0 {
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode("Tasklist is empty")
+		err = json.NewEncoder(w).Encode("Tasklist is empty")
+		if err != nil {
+			logs.Error("failed to encode JSON: %v", err)
+			http.Error(w, "Failed to encode JSON response", http.StatusInternalServerError)
+			return
+		}
 		return
 	}
 	response := map[string]interface{}{
 		"tasks": tasks,
 	}
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(response)
+	err =json.NewEncoder(w).Encode(response)
+	if err != nil {
+		logs.Error("failed to encode JSON: %v", err)
+		http.Error(w, "Failed to encode JSON response", http.StatusInternalServerError)
+		return
+	}
 }
 
 // @Summary UpdateTask
@@ -118,7 +143,12 @@ func (h *Handler) GetTasks(w http.ResponseWriter, r *http.Request) {
 // @Param duration query models.Duration false "Tasks duration"
 // @Router /tasks/update [put]
 func (h *Handler) UpdateTask(w http.ResponseWriter, r *http.Request) {
-	userLogin := r.Context().Value(UserLoginKey).(string)
+	userLogin, ok := r.Context().Value(UserLoginKey).(string)
+	if !ok{
+		logs.Error("failed to get value from context")
+		http.Error(w, "Forbidden", http.StatusForbidden)
+        return
+	}
 	taskID := r.URL.Query().Get("task_id")
 	var durDays int
 	var durHours int
@@ -179,7 +209,12 @@ func (h *Handler) UpdateTask(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode("Done")
+	err = json.NewEncoder(w).Encode("Done")
+	if err != nil {
+		logs.Error("failed to encode JSON: %v", err)
+		http.Error(w, "Failed to encode JSON response", http.StatusInternalServerError)
+		return
+	}
 }
 
 // @Summary DeleteTask
@@ -191,7 +226,12 @@ func (h *Handler) UpdateTask(w http.ResponseWriter, r *http.Request) {
 // @Param task_id query string true "Id of group"
 // @Router /tasks/delete [delete]
 func (h *Handler) DeleteTask(w http.ResponseWriter, r *http.Request) {
-	userLogin := r.Context().Value(UserLoginKey).(string)
+	userLogin, ok := r.Context().Value(UserLoginKey).(string)
+	if !ok{
+		logs.Error("failed to get value from context")
+		http.Error(w, "Forbidden", http.StatusForbidden)
+        return
+	}
 	groupID := r.URL.Query().Get("group_id")
 	taskID := r.URL.Query().Get("task_id")
 	err := h.Task.DeleteTask(r.Context(), taskID, groupID, userLogin)
@@ -201,5 +241,10 @@ func (h *Handler) DeleteTask(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode("Done")
+	err = json.NewEncoder(w).Encode("Done")
+	if err != nil {
+		logs.Error("failed to encode JSON: %v", err)
+		http.Error(w, "Failed to encode JSON response", http.StatusInternalServerError)
+		return
+	}
 }

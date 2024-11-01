@@ -3,9 +3,11 @@ package service
 import (
 	"JourneyPlanner/internal/models"
 	"context"
+	"crypto/rand"
 	"errors"
 	"fmt"
-	"math/rand"
+	"math/big"
+
 	"os"
 	"time"
 
@@ -71,10 +73,12 @@ func (s *GroupSrv) CreateGroup(ctx context.Context, groupName, userLogin string)
 	}
 	groupOID, err := s.Group.CreateGroup(ctx, group)
 	if err != nil {
+		logs.Error(err)
 		return fmt.Errorf("createGroup error: %v", err)
 	}
 	err = s.BlackList.CreateBlacklist(ctx, groupOID)
 	if err != nil {
+		logs.Error(err)
 		return fmt.Errorf("create blacklist error: %v", err)
 	}
 	return nil
@@ -83,7 +87,8 @@ func (s *GroupSrv) CreateGroup(ctx context.Context, groupName, userLogin string)
 func (s *GroupSrv) GetGroupList(ctx context.Context, userLogin string) ([]models.GroupList, error) {
 	groups, err := s.Group.GetGroupList(ctx, userLogin)
 	if err != nil {
-		return nil, err
+		logs.Error(err)
+		return nil, errors.New("failed to get groups")
 	}
 
 	if len(groups) == 0 {
@@ -99,13 +104,13 @@ func (s *GroupSrv) GetGroupList(ctx context.Context, userLogin string) ([]models
 		})
 	}
 	return groupsList, nil
-
 }
 
 func (s *GroupSrv) GetGroupByID(ctx context.Context, groupID, userLogin string) (*models.Group, error) {
 	group, err := s.Group.GetGroup(ctx, groupID, userLogin)
 	if err != nil {
-		return nil, err
+		logs.Error(err)
+		return nil, errors.New("failed to get group")
 	}
 	return group, nil
 }
@@ -113,7 +118,8 @@ func (s *GroupSrv) GetGroupByID(ctx context.Context, groupID, userLogin string) 
 func (s *GroupSrv) BanMember(ctx context.Context, groupID, memberLogin, userLogin string) error {
 	group, err := s.Group.GetGroup(ctx, groupID, userLogin)
 	if err != nil {
-		return err
+		logs.Error(err)
+		return errors.New("failed to ban user")
 	}
 	if group.LeaderLogin != userLogin {
 		return errors.New("you have no permissions to do this")
@@ -130,11 +136,13 @@ func (s *GroupSrv) BanMember(ctx context.Context, groupID, memberLogin, userLogi
 	}
 	err = s.Group.LeaveGroup(ctx, groupID, memberLogin)
 	if err != nil {
-		return err
+		logs.Error(err)
+		return errors.New("failed to ban user")
 	}
 	err = s.BlackList.BanUser(ctx, groupID, memberLogin)
 	if err != nil {
-		return err
+		logs.Error(err)
+		return errors.New("failed to ban user")
 	}
 	s.NotifyUserDisconnect(userLogin, groupID)
 	return nil
@@ -142,12 +150,17 @@ func (s *GroupSrv) BanMember(ctx context.Context, groupID, memberLogin, userLogi
 func (s *GroupSrv) UnbanMember(ctx context.Context, groupID, memberLogin, userLogin string) error {
 	group, err := s.Group.GetGroup(ctx, groupID, userLogin)
 	if err != nil {
-		return err
+		logs.Error(err)
+		return errors.New("failed to unban user")
 	}
 	if group.LeaderLogin != userLogin {
 		return errors.New("you have no permissions to do this")
 	}
 	blacklist, err := s.BlackList.GetBlacklist(ctx, groupID)
+	if err != nil{
+		logs.Error(err)
+		return errors.New("failed to unban user")
+	}
 	isOkay := false
 	for _, member := range blacklist.Blacklist {
 		if member == memberLogin {
@@ -160,7 +173,8 @@ func (s *GroupSrv) UnbanMember(ctx context.Context, groupID, memberLogin, userLo
 	}
 	err = s.BlackList.UnbanUser(ctx, groupID, memberLogin)
 	if err != nil {
-		return err
+		logs.Error(err)
+		return errors.New("failed to unban user")
 	}
 	return nil
 }
@@ -168,7 +182,8 @@ func (s *GroupSrv) UnbanMember(ctx context.Context, groupID, memberLogin, userLo
 func (s *GroupSrv) GetBlacklist(ctx context.Context, groupID, userLogin string) (*models.BlackList, error) {
 	group, err := s.Group.GetGroup(ctx, groupID, userLogin)
 	if err != nil {
-		return nil, err
+		logs.Error(err)
+		return nil, errors.New("failed to get black list")
 	}
 	if group.LeaderLogin != userLogin {
 		return nil, errors.New("you have no permissions to do this")
@@ -176,7 +191,8 @@ func (s *GroupSrv) GetBlacklist(ctx context.Context, groupID, userLogin string) 
 
 	blacklist, err := s.BlackList.GetBlacklist(ctx, groupID)
 	if err != nil {
-		return nil, err
+		logs.Error(err)
+		return nil, errors.New("failed to get black list")
 	}
 	return blacklist, nil
 }
@@ -184,11 +200,13 @@ func (s *GroupSrv) GetBlacklist(ctx context.Context, groupID, userLogin string) 
 func (s *GroupSrv) LeaveGroup(ctx context.Context, groupID, userLogin string) error {
 	group, err := s.Group.GetGroup(ctx, groupID, userLogin)
 	if err != nil {
-		return err
+		logs.Error(err)
+		return errors.New("failed to leave group")
 	}
 	if len(group.Members) <= 1 {
 		if err := s.Group.DeleteGroup(ctx, groupID); err != nil {
-			return err
+			logs.Error(err)
+			return errors.New("failed to leave group")
 		}
 		return nil
 	} else {
@@ -196,13 +214,15 @@ func (s *GroupSrv) LeaveGroup(ctx context.Context, groupID, userLogin string) er
 			newLeader := s.getRandomLeader(group.Members, userLogin)
 			err := s.Group.ChangeGroupLeader(ctx, groupID, newLeader)
 			if err != nil {
-				return err
+				logs.Error(err)
+				return errors.New("failed to change group leader")
 			}
 		}
 
 		err := s.Group.LeaveGroup(ctx, groupID, userLogin)
 		if err != nil {
-			return err
+			logs.Error(err)
+			return errors.New("failed to leave group, please try later")
 		}
 	}
 	s.NotifyUserDisconnect(userLogin, groupID)
@@ -220,14 +240,18 @@ func (s *GroupSrv) getRandomLeader(members []string, userLogin string) string {
 		return newSlice
 	}
 	members = removeUser(members, userLogin)
-	randomNumber := rand.Intn(len(members))
-	return members[randomNumber]
-
+	n, err := rand.Int(rand.Reader, big.NewInt(int64(len(members))))
+	if err != nil {
+		logs.Errorf("error during getting random member: %v", err)
+		return ""
+	}
+	return members[int32(n.Int64())]
 }
 func (s *GroupSrv) GiveLeaderRole(ctx context.Context, groupID, userLogin, memberLogin string) error {
 	group, err := s.Group.GetGroup(ctx, groupID, userLogin)
 	if err != nil {
-		return err
+		logs.Error(err)
+		return errors.New("failed to get group")
 	}
 	if group.LeaderLogin != userLogin {
 		return errors.New("you have no permissions to do this")
@@ -244,7 +268,8 @@ func (s *GroupSrv) GiveLeaderRole(ctx context.Context, groupID, userLogin, membe
 	}
 	err = s.Group.ChangeGroupLeader(ctx, groupID, memberLogin)
 	if err != nil {
-		return err
+		logs.Error(err)
+		return errors.New("failed to change leader")
 	}
 	return nil
 }
@@ -252,14 +277,16 @@ func (s *GroupSrv) GiveLeaderRole(ctx context.Context, groupID, userLogin, membe
 func (s *GroupSrv) DeleteGroup(ctx context.Context, groupID, userLogin string) error {
 	group, err := s.Group.GetGroup(ctx, groupID, userLogin)
 	if err != nil {
-		return err
+		logs.Error(err)
+		return errors.New("Failed to find group")
 	}
 	if group.LeaderLogin != userLogin {
 		return errors.New("you have no permissions to do this")
 	}
 	err = s.Group.DeleteGroup(ctx, groupID)
 	if err != nil {
-		return err
+		logs.Error(err)
+		return errors.New("failed to delete group")
 	}
 	return nil
 }
@@ -267,11 +294,13 @@ func (s *GroupSrv) DeleteGroup(ctx context.Context, groupID, userLogin string) e
 func (s *GroupSrv) InviteUser(ctx context.Context, groupID, userLogin, invitedUser string) error {
 	group, err := s.Group.GetGroup(ctx, groupID, userLogin)
 	if err != nil {
+		logs.Error(err)
 		return errors.New("group is not found, or you are not a member of it")
 	}
 
 	_, err = s.User.GetUserByLogin(ctx, invitedUser)
 	if err != nil {
+		logs.Error(err)
 		return errors.New("user not found")
 	}
 	isOkay := true
@@ -286,7 +315,8 @@ func (s *GroupSrv) InviteUser(ctx context.Context, groupID, userLogin, invitedUs
 	}
 	blacklist, err := s.BlackList.GetBlacklist(ctx, groupID)
 	if err != nil {
-		return fmt.Errorf("cant get blacklist of group")
+		logs.Error(err)
+		return errors.New("failed to get blacklist of group")
 	}
 	for _, member := range blacklist.Blacklist {
 		if member == invitedUser {
@@ -299,12 +329,14 @@ func (s *GroupSrv) InviteUser(ctx context.Context, groupID, userLogin, invitedUs
 	}
 	isOkay, err = s.Invite.IsAlreadyInvited(ctx, groupID, invitedUser)
 	if !isOkay {
+		logs.Error(err)
 		return errors.New("this user is already invited to this group")
 	}
 
 	inviteToken, err := s.GetInviteToken(invitedUser, groupID)
 	if err != nil {
-		return err
+		logs.Error(err)
+		return errors.New("failed to create invite, please try later")
 	}
 
 	invite := models.Invitation{
@@ -317,14 +349,15 @@ func (s *GroupSrv) InviteUser(ctx context.Context, groupID, userLogin, invitedUs
 	}
 	err = s.Invite.AddInvitation(ctx, invite)
 	if err != nil {
-		return err
+		logs.Error(err)
+		return errors.New("Failed to send invitation")
 	}
 	return nil
 }
 
 func (s *GroupSrv) GetInviteToken(invitedUser, groupID string) (string, error) {
 	secretKey := os.Getenv("SECRET_KEY")
-	expirationTime := time.Now().UTC().Add(24 * time.Hour)
+	expirationTime := time.Now().UTC().Add(HoursInDay * time.Hour)
 
 	claims := &models.InvitationToken{
 		UserLogin: invitedUser,
@@ -337,21 +370,24 @@ func (s *GroupSrv) GetInviteToken(invitedUser, groupID string) (string, error) {
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	tokenString, err := token.SignedString([]byte(secretKey))
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("Failed to create token")
 	}
 	return tokenString, nil
 }
 func (s *GroupSrv) JoinGroup(ctx context.Context, token string) error {
 	inviteDetails, err := s.ValidateInvitationToken(token)
 	if err != nil {
-		return err
+		logs.Error(err)
+		return errors.New("Failed to confirm your invitation, please try again later")
 	}
 	_, err = s.User.GetUserByLogin(ctx, inviteDetails.UserLogin)
 	if err != nil {
+		logs.Error(err)
 		return errors.New("user was not found")
 	}
 	group, err := s.Group.GetGroup(ctx, inviteDetails.GroupID)
 	if group != nil {
+		logs.Error(err)
 		return errors.New("this group is no longer exist")
 	}
 	isOkay := true
@@ -366,6 +402,7 @@ func (s *GroupSrv) JoinGroup(ctx context.Context, token string) error {
 	}
 	blacklist, err := s.BlackList.GetBlacklist(ctx, inviteDetails.GroupID)
 	if err != nil {
+		logs.Error(err)
 		return fmt.Errorf("cant get blacklist of group, %v", err)
 	}
 	for _, member := range blacklist.Blacklist {
@@ -380,12 +417,13 @@ func (s *GroupSrv) JoinGroup(ctx context.Context, token string) error {
 
 	err = s.Group.JoinGroup(ctx, inviteDetails.GroupID, inviteDetails.UserLogin)
 	if err != nil {
-		return err
+		logs.Error(err)
+		return fmt.Errorf("JoinGroup error: %v", err)
 	}
 
 	err = s.Invite.DeleteInviteByToken(ctx, token)
 	if err != nil {
-		logs.Warn(err)
+		logs.Error(err)
 	}
 	return nil
 }
@@ -399,9 +437,8 @@ func (s *GroupSrv) ValidateInvitationToken(tokenString string) (*models.Invitati
 		}
 		return []byte(secretKey), nil
 	})
-
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("ValidateInviteToken error: %v", err)
 	}
 
 	if !token.Valid {
@@ -414,7 +451,8 @@ func (s *GroupSrv) ValidateInvitationToken(tokenString string) (*models.Invitati
 func (s *GroupSrv) GetInviteList(ctx context.Context, userLogin string) ([]models.InvitationList, error) {
 	invites, err := s.Invite.GetInvites(ctx, userLogin)
 	if err != nil {
-		return nil, err
+		logs.Error(err)
+		return nil, fmt.Errorf("GetInviteList error: %v", err)
 	}
 	inviteList := s.inviteFormat(invites)
 	return inviteList, nil
@@ -433,10 +471,10 @@ func (s *GroupSrv) inviteFormat(invites []models.Invitation) []models.Invitation
 }
 
 func (s *GroupSrv) DeclineInvite(ctx context.Context, userLogin, inviteID string) error {
-
 	modDocs, err := s.Invite.DeleteInviteByID(ctx, inviteID, userLogin)
 	if err != nil {
-		return err
+		logs.Error(err)
+		return fmt.Errorf("DeclineInvite error: %v", err)
 	}
 	if modDocs == 0 {
 		return errors.New("invite wasn't found")

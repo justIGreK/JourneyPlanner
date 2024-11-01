@@ -29,6 +29,7 @@ func NewPollSrv(pollRepo PollRepository, groupRepo GroupRepository) *PollSrv {
 func (s *PollSrv) CreatePoll(ctx context.Context, pollInfo models.CreatePoll, userLogin string) error {
 	_, err := s.Group.GetGroup(ctx, pollInfo.GroupID, userLogin)
 	if err != nil {
+		logs.Error(err)
 		return errors.New("this group is not exist or you are not member of it")
 	}
 
@@ -46,18 +47,24 @@ func (s *PollSrv) CreatePoll(ctx context.Context, pollInfo models.CreatePoll, us
 		IsEarlyClosed: false,
 	}
 	err = s.Poll.CreatePoll(ctx, newPoll, pollInfo.GroupID)
-	return err
+	if err != nil {
+		logs.Error(err)
+		return errors.New("System error")
+	}
+	return nil
 }
 
 func (s *PollSrv) GetPollList(ctx context.Context, groupID, userLogin string) (*models.PollList, error) {
 	_, err := s.Group.GetGroup(ctx, groupID, userLogin)
 	if err != nil {
+		logs.Error(err)
 		return nil, errors.New("this group is not exist or you are not member of it")
 	}
 
 	openPolls, closedPolls, err := s.Poll.GetPollList(ctx, groupID)
 	if err != nil {
-		return nil, err
+		logs.Error(err)
+		return nil, errors.New("System error")
 	}
 
 	pollList := s.preparePollList(openPolls, closedPolls)
@@ -66,8 +73,7 @@ func (s *PollSrv) GetPollList(ctx context.Context, groupID, userLogin string) (*
 
 func (s *PollSrv) preparePollList(openPolls, closedPolls []models.Poll) models.PollList {
 	pollList := models.PollList{}
-	allPolls := append(openPolls, closedPolls...)
-	for _, poll := range allPolls {
+	for _, poll := range openPolls {
 		printPoll := models.PrintPollList{
 			ID:               poll.ID,
 			Title:            poll.Title,
@@ -78,33 +84,33 @@ func (s *PollSrv) preparePollList(openPolls, closedPolls []models.Poll) models.P
 			SecondVotesCount: len(poll.Votes2),
 			EndTime:          poll.EndTime.Format("2006-01-02 15:04:05"),
 		}
-
-		if containsPoll(openPolls, poll) {
-			pollList.OpenPolls = append(pollList.OpenPolls, printPoll)
-		} else {
-			pollList.ClosedPolls = append(pollList.ClosedPolls, printPoll)
-		}
+		pollList.OpenPolls = append(pollList.OpenPolls, printPoll)
 	}
-
+	for _, poll := range closedPolls {
+		printPoll := models.PrintPollList{
+			ID:               poll.ID,
+			Title:            poll.Title,
+			Creator:          poll.Creator,
+			FirstOption:      poll.FirstOption,
+			FirstVotesCount:  len(poll.Votes1),
+			SecondOption:     poll.SecondOption,
+			SecondVotesCount: len(poll.Votes2),
+			EndTime:          poll.EndTime.Format("2006-01-02 15:04:05"),
+		}
+		pollList.ClosedPolls = append(pollList.ClosedPolls, printPoll)
+	}
 	return pollList
-}
-
-func containsPoll(polls []models.Poll, poll models.Poll) bool {
-	for _, p := range polls {
-		if p.ID == poll.ID {
-			return true
-		}
-	}
-	return false
 }
 
 func (s *PollSrv) DeletePollByID(ctx context.Context, pollID, groupID, userLogin string) error {
 	group, err := s.Group.GetGroup(ctx, groupID, userLogin)
 	if err != nil {
+		logs.Error(err)
 		return errors.New("this group is not exist or you are not member of it")
 	}
 	poll, err := s.Poll.GetPollById(ctx, pollID)
 	if err != nil {
+		logs.Error(err)
 		return errors.New("poll is not found")
 	}
 	if group.LeaderLogin != userLogin && poll.Creator != userLogin {
@@ -112,7 +118,8 @@ func (s *PollSrv) DeletePollByID(ctx context.Context, pollID, groupID, userLogin
 	}
 	err = s.Poll.DeletePoll(ctx, pollID)
 	if err != nil {
-		return err
+		logs.Error(err)
+		return errors.New("System error")
 	}
 	return nil
 }
@@ -120,10 +127,12 @@ func (s *PollSrv) DeletePollByID(ctx context.Context, pollID, groupID, userLogin
 func (s *PollSrv) ClosePoll(ctx context.Context, pollID, groupID, userLogin string) error {
 	group, err := s.Group.GetGroup(ctx, groupID, userLogin)
 	if err != nil {
+		logs.Error(err)
 		return errors.New("this group is not exist or you are not member of it")
 	}
 	poll, err := s.Poll.GetPollById(ctx, pollID)
 	if err != nil {
+		logs.Error(err)
 		return errors.New("poll is not found")
 	}
 	now := time.Now().UTC()
@@ -135,7 +144,8 @@ func (s *PollSrv) ClosePoll(ctx context.Context, pollID, groupID, userLogin stri
 	}
 	err = s.Poll.ClosePoll(ctx, pollID)
 	if err != nil {
-		return err
+		logs.Error(err)
+		return errors.New("System error")
 	}
 	return nil
 }
@@ -143,10 +153,12 @@ func (s *PollSrv) ClosePoll(ctx context.Context, pollID, groupID, userLogin stri
 func (s *PollSrv) VotePoll(ctx context.Context, userLogin string, vote models.AddVote) error {
 	_, err := s.Group.GetGroup(ctx, vote.GroupID, userLogin)
 	if err != nil {
+		logs.Error(err)
 		return errors.New("this group is not exist or you are not member of it")
 	}
 	poll, err := s.Poll.GetPollById(ctx, vote.PollID)
 	if err != nil {
+		logs.Error(err)
 		return errors.New("poll is not found")
 	}
 	now := time.Now().UTC()
@@ -155,11 +167,13 @@ func (s *PollSrv) VotePoll(ctx context.Context, userLogin string, vote models.Ad
 	}
 	err = s.Poll.RemoveVote(ctx, vote.PollID, userLogin)
 	if err != nil {
-		return err
+		logs.Error(err)
+		return errors.New("System error")
 	}
 	err = s.Poll.AddVote(ctx, vote.PollID, vote.Option, userLogin)
 	if err != nil {
-		return err
+		logs.Error(err)
+		return errors.New("System error")
 	}
 	return nil
 }

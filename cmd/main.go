@@ -10,11 +10,15 @@ import (
 	logger "JourneyPlanner/pkg/log"
 	"context"
 	"net/http"
+	"time"
 
 	"go.uber.org/zap"
 )
 
-var logs *zap.Logger
+const (
+	RWTimeout   = 10
+	IdleTimeout = 60
+)
 
 // @title Journer Planner
 // @description Application for planning your journey
@@ -30,7 +34,11 @@ func main() {
 	logs := logger.GetLogger()
 	setUpProjectLogger(logs)
 	config.LoadEnv()
-	defer logs.Sync()
+	defer func() {
+		if err := logs.Sync(); err != nil {
+			logs.Error("error to sync logger: %v", zap.Error(err))
+		}
+	}()
 	dbclient := mongorepo.CreateMongoClient(ctx)
 	userRepo := mongorepo.NewMongoUserRepo(dbclient)
 	taskRepo := mongorepo.NewMongoTaskRepo(dbclient)
@@ -50,7 +58,14 @@ func main() {
 
 	handler := handler.NewHandler(pollSrv, taskSrv, userSrv, groupSrv)
 	logs.Sugar().Info("Server is now listening 8080...")
-	err := http.ListenAndServe(":8080", handler.InitRoutes(wsHandler))
+	srv := &http.Server{
+		Addr:         ":8080",
+		Handler:      handler.InitRoutes(wsHandler),
+		ReadTimeout:  RWTimeout * time.Second,
+		WriteTimeout: RWTimeout * time.Second,
+		IdleTimeout:  IdleTimeout * time.Second,
+	}
+	err := srv.ListenAndServe()
 	if err != nil {
 		logs.Sugar().Fatal("Server error", zap.Error(err))
 	}

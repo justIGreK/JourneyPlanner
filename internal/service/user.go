@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"regexp"
 
-	"go.uber.org/zap"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -36,7 +35,7 @@ func (s *UserSrv) RegisterUser(ctx context.Context, user models.SignUp) error {
 	}
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost)
 	if err != nil {
-		logs.Error("error of generating password", zap.Error(err))
+		logs.Error("error of generating password", err)
 		return errors.New("unfortunately we were unable to process your request, please try again later")
 	}
 	newUser := models.User{
@@ -47,6 +46,7 @@ func (s *UserSrv) RegisterUser(ctx context.Context, user models.SignUp) error {
 	}
 	err = s.User.CreateUser(ctx, newUser)
 	if err != nil {
+		logs.Error(err)
 		return fmt.Errorf("error during creating user:%v", err)
 	}
 	return nil
@@ -61,16 +61,19 @@ func (s *UserSrv) LoginUser(ctx context.Context, option, password string) (strin
 		user, err = s.User.GetUserByLogin(ctx, option)
 	}
 	if err != nil {
+		logs.Error(err)
 		return "", errors.New("invalid credentials")
 	}
 
 	err = bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(password))
 	if err != nil {
+		logs.Error(err)
 		return "", errors.New("invalid credentials")
 	}
 
 	token, err := s.GeneratePasetoToken(user.Login)
 	if err != nil {
+		logs.Error(err)
 		return "", fmt.Errorf("error during generating token: %v", err)
 	}
 
@@ -86,11 +89,12 @@ func (s *UserSrv) isValidEmail(email string) bool {
 
 func (s *UserSrv) duplicateCheck(ctx context.Context, user models.SignUp) error {
 	if _, err := s.User.GetUserByLogin(ctx, user.Login); err == nil {
+		logs.Error(err)
 		return errors.New("this login is already registered")
 	}
 	if _, err := s.User.GetUserByEmail(ctx, user.Email); err == nil {
+		logs.Error(err)
 		return errors.New("this email is already registered")
 	}
 	return nil
-
 }

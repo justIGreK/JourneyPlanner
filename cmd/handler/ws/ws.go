@@ -1,6 +1,7 @@
 package ws
 
 import (
+	"JourneyPlanner/cmd/handler"
 	"JourneyPlanner/internal/models"
 	"context"
 	"fmt"
@@ -47,13 +48,18 @@ func SetLogger(l *zap.Logger) {
 }
 
 const (
-	UserLoginKey string = "user_id"
+	UserLoginKey handler.ContextKey = "user_id"
 )
 
 var validate = validator.New()
 
 func (h *WebSocketHandler) HandleConnections(w http.ResponseWriter, r *http.Request) {
-	userLogin := r.Context().Value(UserLoginKey).(string)
+	userLogin, ok := r.Context().Value(UserLoginKey).(string)
+	if !ok{
+		logs.Error("failed to get value from context")
+		http.Error(w, "Forbidden", http.StatusForbidden)
+        return
+	}
 	msg := models.Message{
 		User:    userLogin,
 		GroupID: r.URL.Query().Get("group_id"),
@@ -74,7 +80,11 @@ func (h *WebSocketHandler) HandleConnections(w http.ResponseWriter, r *http.Requ
 		logs.Errorf("error during connecting:%v", err)
 		return
 	}
-	defer ws.Close()
+	defer func() {
+		if err := ws.Close(); err != nil {
+			logs.Error("close connection error: %v", err)
+		}
+	}()
 
 	connKey := fmt.Sprintf("%s_%s", msg.User, msg.GroupID)
 	h.mu.Lock()
@@ -85,11 +95,17 @@ func (h *WebSocketHandler) HandleConnections(w http.ResponseWriter, r *http.Requ
 
 	messages, err := h.ChatService.GetChatHistory(r.Context(), msg.GroupID)
 	if err != nil {
-		ws.WriteJSON("error to loading history")
+		err = ws.WriteMessage(websocket.TextMessage, []byte("error to loading history"))
+		if err !=nil{
+			logs.Errorf("failed to write message: %v", err)
+		}
 	} else {
 		for _, msg := range messages {
 			message := fmt.Sprintf("%v: %v\t %v", msg.User, msg.Content, msg.Time.Format("2006-01-02 15:04:05"))
-			ws.WriteMessage(websocket.TextMessage, []byte(message))
+			err = ws.WriteMessage(websocket.TextMessage, []byte(message))
+			if err != nil{
+				logs.Errorf("failed to write message: %v", err)
+			}
 		}
 	}
 
@@ -117,7 +133,10 @@ func (h *WebSocketHandler) broadcastMessage(msg models.Message) {
 		err := conn.WriteMessage(websocket.TextMessage, []byte(message))
 		if err != nil {
 			logs.Errorf("error sending message: %v", err)
-			conn.Close()
+			err = conn.Close()
+			if err != nil{
+				logs.Errorf("failed to close connection: %v", err)
+			}
 			delete(h.Clients, connKey)
 		}
 	}
@@ -128,8 +147,14 @@ func (h *WebSocketHandler) NotifyUserDisconnect(userLogin, groupID string) {
 
 	h.mu.Lock()
 	if conn, ok := h.Clients[connKey]; ok {
-		conn.WriteMessage(websocket.TextMessage, []byte("You are not a member of this group anymore"))
-		conn.Close()
+		err := conn.WriteMessage(websocket.TextMessage, []byte("You are not a member of this group anymore"))
+		if err != nil{
+			logs.Errorf("failed to write message: %v", err)
+		}
+		err = conn.Close()
+		if err != nil{
+			logs.Errorf("failed to close connection: %v", err)
+		}
 		delete(h.Clients, connKey)
 	}
 	h.mu.Unlock()
