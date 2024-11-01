@@ -102,16 +102,6 @@ const docTemplate = `{
                         "name": "name",
                         "in": "query",
                         "required": true
-                    },
-                    {
-                        "type": "array",
-                        "items": {
-                            "type": "string"
-                        },
-                        "collectionFormat": "multi",
-                        "description": "by adding logins you will automatically invite this users",
-                        "name": "invites",
-                        "in": "query"
                     }
                 ],
                 "responses": {}

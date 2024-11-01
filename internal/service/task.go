@@ -6,20 +6,18 @@ import (
 	"errors"
 	"fmt"
 	"time"
-
-	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 type TaskRepository interface {
-	AddTask(ctx context.Context, task models.Task) error
-	GetTaskList(ctx context.Context, userLogin string, groupID primitive.ObjectID) ([]models.Task, error)
-	UpdateTask(ctx context.Context, taskID primitive.ObjectID, updates models.Task) error
-	DeleteTask(ctx context.Context, taskID primitive.ObjectID) error
-	GetTaskById(ctx context.Context, taskID, groupID primitive.ObjectID) (*models.Task, error)
+	AddTask(ctx context.Context, task models.Task, groupID string) error
+	GetTaskList(ctx context.Context, userLogin, groupID string) ([]models.Task, error)
+	GetTaskById(ctx context.Context, taskID, groupID string) (*models.Task, error)
+	UpdateTask(ctx context.Context, taskID string, newTask models.Task) error
+	DeleteTask(ctx context.Context, taskID string) error
 }
 
 type TaskSrv struct {
-	Task TaskRepository
+	Task  TaskRepository
 	Group GroupRepository
 }
 
@@ -28,37 +26,35 @@ func NewTaskSrv(taskRepo TaskRepository, groupRepo GroupRepository) *TaskSrv {
 }
 
 func (s *TaskSrv) CreateTask(ctx context.Context, taskInfo models.CreateTask, userLogin string) error {
-	groupOID, err := primitive.ObjectIDFromHex(taskInfo.GroupID)
+	_, err := s.Group.GetGroup(ctx, taskInfo.GroupID, userLogin)
 	if err != nil {
-		return err
-	}
-	_, err = s.Group.GetGroupById(ctx, groupOID, userLogin)
-	if err != nil {
+		logs.Error(err)
 		return errors.New("this group is not exist or you are not member of it")
 	}
 	dateTimeStr := fmt.Sprintf("%sT%s:00Z", taskInfo.StartTime.StartDate, taskInfo.StartTime.StartTime)
 
 	startTime, err := time.Parse(dateformat, dateTimeStr)
 	if err != nil {
+		logs.Error(err)
 		return fmt.Errorf("invalid date or time format: %v", err)
 	}
 	now := time.Now().UTC()
 	if startTime.Before(now) {
 		return errors.New("you cant add tasks to past time")
 	}
-	totalDuration := calculateDuration(taskInfo.Duration) 
+	totalDuration := calculateDuration(taskInfo.Duration)
 	endTime := startTime.Add(time.Duration(totalDuration) * time.Minute)
 
 	newTask := models.Task{
-		GroupID:   groupOID,
 		Title:     taskInfo.Title,
 		StartTime: startTime,
 		Duration:  totalDuration,
 		EndTime:   endTime,
 	}
-	existingTasks, err := s.Task.GetTaskList(ctx, userLogin, groupOID)
+	existingTasks, err := s.Task.GetTaskList(ctx, userLogin, taskInfo.GroupID)
 	if err != nil {
-		return err
+		logs.Error(err)
+		return errors.New("System error")
 	}
 
 	for _, existingTask := range existingTasks {
@@ -66,9 +62,10 @@ func (s *TaskSrv) CreateTask(ctx context.Context, taskInfo models.CreateTask, us
 			return fmt.Errorf("task overlaps with an existing task: %s", existingTask.Title)
 		}
 	}
-	err = s.Task.AddTask(ctx, newTask)
+	err = s.Task.AddTask(ctx, newTask, taskInfo.GroupID)
 	if err != nil {
-		return err
+		logs.Error(err)
+		return errors.New("System error")
 	}
 	return nil
 }
@@ -78,17 +75,15 @@ func doTasksOverlap(existingTask, newTask models.Task) bool {
 }
 
 func (s *TaskSrv) GetTaskList(ctx context.Context, groupID, userLogin string) ([]models.Task, error) {
-	groupOID, err := primitive.ObjectIDFromHex(groupID)
+	_, err := s.Group.GetGroup(ctx, groupID, userLogin)
 	if err != nil {
-		return nil, err
-	}
-	_, err = s.Group.GetGroupById(ctx, groupOID, userLogin)
-	if err != nil {
+		logs.Error(err)
 		return nil, errors.New("this group is not exist or you are not member of it")
 	}
-	tasks, err := s.Task.GetTaskList(ctx, userLogin, groupOID)
+	tasks, err := s.Task.GetTaskList(ctx, userLogin, groupID)
 	if err != nil {
-		return nil, err
+		logs.Error(err)
+		return nil, errors.New("System error")
 	}
 	return tasks, nil
 }
@@ -96,24 +91,19 @@ func (s *TaskSrv) GetTaskList(ctx context.Context, groupID, userLogin string) ([
 var dateformat string = "2006-01-02T15:04:05Z"
 
 func (s *TaskSrv) UpdateTask(ctx context.Context, taskID, userLogin string, updateTask models.CreateTask) error {
-	groupOID, err := primitive.ObjectIDFromHex(updateTask.GroupID)
+	group, err := s.Group.GetGroup(ctx, updateTask.GroupID, userLogin)
 	if err != nil {
-		return fmt.Errorf("group id: %v", err)
-	}
-	taskOID, err := primitive.ObjectIDFromHex(taskID)
-	if err != nil {
-		return fmt.Errorf("group id: %v", err)
-	}
-	group, err := s.Group.GetGroupById(ctx, groupOID, userLogin)
-	if err != nil {
+		logs.Error(err)
 		return errors.New("this group is not exist or you are not member of it")
 	}
 
 	if group.LeaderLogin != userLogin {
+		logs.Error(err)
 		return errors.New("you have no permissions to do this")
 	}
-	task, err := s.Task.GetTaskById(ctx, taskOID, groupOID)
+	task, err := s.Task.GetTaskById(ctx, taskID, updateTask.GroupID)
 	if err != nil {
+		logs.Error(err)
 		return errors.New("task was not found")
 	}
 	var startTime time.Time
@@ -121,77 +111,82 @@ func (s *TaskSrv) UpdateTask(ctx context.Context, taskID, userLogin string, upda
 		dateTimeStr := fmt.Sprintf("%sT%s:00Z", updateTask.StartTime.StartDate, updateTask.StartTime.StartTime)
 		startTime, err = time.Parse(dateformat, dateTimeStr)
 		if err != nil {
+			logs.Error(err)
 			return fmt.Errorf("invalid date or time format: %v", err)
 		}
 		now := time.Now().UTC()
 		if startTime.Before(now) {
+			logs.Error(err)
 			return errors.New("you cant add tasks to past time")
 		}
-	}else{
+	} else {
 		startTime = task.StartTime
 	}
 	var endTime time.Time
 	var totalDuration int
-	if !updateTask.StartTime.IsFullEmpty() && !updateTask.Duration.IsEmpty() {
+	startTimeProvided := !updateTask.StartTime.IsFullEmpty()
+	durationProvided := !updateTask.Duration.IsEmpty()
+	switch {
+	case startTimeProvided && durationProvided:
 		totalDuration = calculateDuration(updateTask.Duration)
 		endTime = startTime.Add(time.Duration(totalDuration) * time.Minute)
-	} else if updateTask.StartTime.IsFullEmpty() && !updateTask.Duration.IsEmpty() {
-		totalDuration = calculateDuration(updateTask.Duration) 
+	case !startTimeProvided && durationProvided:
+		totalDuration = calculateDuration(updateTask.Duration)
 		endTime = task.StartTime.Add(time.Duration(totalDuration) * time.Minute)
-	} else if !updateTask.StartTime.IsFullEmpty() && updateTask.Duration.IsEmpty() {
+	case startTimeProvided && !durationProvided:
 		totalDuration = task.Duration
 		endTime = startTime.Add(time.Duration(totalDuration) * time.Minute)
-		
 	}
-	fmt.Println(totalDuration) 
 	updates := models.Task{
 		Title:     updateTask.Title,
 		StartTime: startTime,
-		Duration: totalDuration,
+		Duration:  totalDuration,
 		EndTime:   endTime,
 	}
-	existingTasks, err := s.Task.GetTaskList(ctx, userLogin, groupOID)
+	existingTasks, err := s.Task.GetTaskList(ctx, userLogin, updateTask.GroupID)
 	if err != nil {
-		return err
+		logs.Error(err)
+		return errors.New("System error")
 	}
 
 	for _, existingTask := range existingTasks {
-		if existingTask.ID != taskOID{
+		if existingTask.ID.Hex() != taskID {
 			if doTasksOverlap(existingTask, updates) {
 				return fmt.Errorf("task overlaps with an existing task: %s", existingTask.Title)
 			}
 		}
 	}
-	err = s.Task.UpdateTask(ctx, taskOID, updates)
+	err = s.Task.UpdateTask(ctx, taskID, updates)
 	if err != nil {
-		return err
+		logs.Error(err)
+		return errors.New("System error")
 	}
 
 	return nil
 }
+
+const (
+	HoursInDay    = 24
+	MinutesInHour = 60
+)
+
 func calculateDuration(dur models.Duration) int {
-    totalMinutes := (dur.DurDays * 24 * 60) + (dur.DurHours * 60) + dur.DurMinutes
-    return totalMinutes
+	totalMinutes := (dur.DurDays * HoursInDay * MinutesInHour) + (dur.DurHours * MinutesInHour) + dur.DurMinutes
+	return totalMinutes
 }
 func (s *TaskSrv) DeleteTask(ctx context.Context, taskID, groupID, userLogin string) error {
-	groupOID, err := primitive.ObjectIDFromHex(groupID)
+	group, err := s.Group.GetGroup(ctx, groupID, userLogin)
 	if err != nil {
-		return fmt.Errorf("group id: %v", err)
-	}
-	taskOID, err := primitive.ObjectIDFromHex(taskID)
-	if err != nil {
-		return fmt.Errorf("group id: %v", err)
-	}
-	group, err := s.Group.GetGroupById(ctx, groupOID, userLogin)
-	if err != nil {
+		logs.Error(err)
 		return errors.New("this group is not exist or you are not member of it")
 	}
 	if group.LeaderLogin != userLogin {
 		return errors.New("you have no permissions to do this")
 	}
-	err = s.Task.DeleteTask(ctx, taskOID)
+	err = s.Task.DeleteTask(ctx, taskID)
 	if err != nil {
-		return err
+		logs.Error(err)
+		return errors.New("System error")
 	}
 	return nil
 }

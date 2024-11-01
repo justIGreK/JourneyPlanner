@@ -8,3 +8,8 @@ type Message struct {
 	GroupID string    `json:"group_id" bson:"group_id"`
 	Time    time.Time `bson:"time"`
 }
+
+type UserConn struct {
+	UserLogin string
+	GroupID   string
+}

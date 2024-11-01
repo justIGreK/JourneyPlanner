@@ -15,6 +15,5 @@ func LoadEnv() {
 	err := godotenv.Load("../.env")
 	if err != nil {
 		logs.Errorf("Error loading .env file: %v", err)
-
 	}
 }

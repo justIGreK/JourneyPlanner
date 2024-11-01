@@ -4,6 +4,7 @@ import (
 	"JourneyPlanner/internal/models"
 	"encoding/json"
 	"net/http"
+	"strings"
 
 	"go.uber.org/zap"
 )
@@ -20,26 +21,33 @@ func SetLogger(l *zap.Logger) {
 // @Security BearerAuth
 // @Produce  json
 // @Param name query string true "name of group"
-// @Param invites query []string false "by adding logins you will automatically invite this users" collectionFormat(multi)
 // @Router /groups/add [post]
 func (h *Handler) AddGroup(w http.ResponseWriter, r *http.Request) {
-	userLogin := r.Context().Value(UserLoginKey).(string)
-	groupInfo := models.CreateGroup{
-		Name:        r.URL.Query().Get("name"),
-		Invitations: r.URL.Query()["invites"],
-	}
-	if err := validate.Struct(groupInfo); err != nil {
-		http.Error(w, "Validation failed: "+err.Error(), http.StatusBadRequest)
+	userLogin, ok := r.Context().Value(UserLoginKey).(string)
+	if !ok {
+		logs.Error("failed to get value from context")
+		http.Error(w, "Forbidden", http.StatusForbidden)
 		return
 	}
-	err := h.Group.CreateGroup(r.Context(), groupInfo.Name, userLogin, groupInfo.Invitations)
+	name := r.URL.Query().Get("name")
+	name = strings.TrimSpace(name)
+	if name == "" {
+		http.Error(w, "Invalid name", http.StatusBadRequest)
+		return
+	}
+	err := h.Group.CreateGroup(r.Context(), name, userLogin)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode("Group is created")
+	err = json.NewEncoder(w).Encode("Group is created")
+	if err != nil {
+		logs.Error("failed to encode JSON: %v", err)
+		http.Error(w, "Failed to encode JSON response", http.StatusInternalServerError)
+		return
+	}
 }
 
 // @Summary GetGroups
@@ -49,7 +57,12 @@ func (h *Handler) AddGroup(w http.ResponseWriter, r *http.Request) {
 // @Produce  json
 // @Router /groups/getlist [get]
 func (h *Handler) GetGroups(w http.ResponseWriter, r *http.Request) {
-	userLogin := r.Context().Value(UserLoginKey).(string)
+	userLogin, ok := r.Context().Value(UserLoginKey).(string)
+	if !ok {
+		logs.Error("failed to get value from context")
+		http.Error(w, "Forbidden", http.StatusForbidden)
+		return
+	}
 	groups, err := h.Group.GetGroupList(r.Context(), userLogin)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -59,7 +72,12 @@ func (h *Handler) GetGroups(w http.ResponseWriter, r *http.Request) {
 		"discussion": groups,
 	}
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(response)
+	err = json.NewEncoder(w).Encode(response)
+	if err != nil {
+		logs.Error("failed to encode JSON: %v", err)
+		http.Error(w, "Failed to encode JSON response", http.StatusInternalServerError)
+		return
+	}
 }
 
 // @Summary GetGroupInfo
@@ -70,7 +88,12 @@ func (h *Handler) GetGroups(w http.ResponseWriter, r *http.Request) {
 // @Param group_id query string true "id of group"
 // @Router /groups/getgroupinfo [get]
 func (h *Handler) GetGroupInfo(w http.ResponseWriter, r *http.Request) {
-	userLogin := r.Context().Value(UserLoginKey).(string)
+	userLogin, ok := r.Context().Value(UserLoginKey).(string)
+	if !ok {
+		logs.Error("failed to get value from context")
+		http.Error(w, "Forbidden", http.StatusForbidden)
+		return
+	}
 	groupId := r.URL.Query().Get("group_id")
 	groupDetails, err := h.Group.GetGroupByID(r.Context(), groupId, userLogin)
 	if err != nil {
@@ -81,7 +104,12 @@ func (h *Handler) GetGroupInfo(w http.ResponseWriter, r *http.Request) {
 		"group": groupDetails,
 	}
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(response)
+	err = json.NewEncoder(w).Encode(response)
+	if err != nil {
+		logs.Error("failed to encode JSON: %v", err)
+		http.Error(w, "Failed to encode JSON response", http.StatusInternalServerError)
+		return
+	}
 }
 
 // @Summary Get group blacklist
@@ -92,7 +120,12 @@ func (h *Handler) GetGroupInfo(w http.ResponseWriter, r *http.Request) {
 // @Param group_id query string true "id of group"
 // @Router /groups/blacklist [get]
 func (h *Handler) GetBlacklist(w http.ResponseWriter, r *http.Request) {
-	userLogin := r.Context().Value(UserLoginKey).(string)
+	userLogin, ok := r.Context().Value(UserLoginKey).(string)
+	if !ok {
+		logs.Error("failed to get value from context")
+		http.Error(w, "Forbidden", http.StatusForbidden)
+		return
+	}
 	groupId := r.URL.Query().Get("group_id")
 	blacklist, err := h.Group.GetBlacklist(r.Context(), groupId, userLogin)
 	if err != nil {
@@ -103,10 +136,15 @@ func (h *Handler) GetBlacklist(w http.ResponseWriter, r *http.Request) {
 		"blacklist": blacklist,
 	}
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(response)
+	err = json.NewEncoder(w).Encode(response)
+	if err != nil {
+		logs.Error("failed to encode JSON: %v", err)
+		http.Error(w, "Failed to encode JSON response", http.StatusInternalServerError)
+		return
+	}
 }
 
-// @Summary BanMember 
+// @Summary BanMember
 // @Tags blacklist
 // @Description Kick and ban member from group
 // @Security BearerAuth
@@ -115,10 +153,15 @@ func (h *Handler) GetBlacklist(w http.ResponseWriter, r *http.Request) {
 // @Param memberLogin query string true "login of member"
 // @Router /groups/ban [put]
 func (h *Handler) BanMember(w http.ResponseWriter, r *http.Request) {
-	userLogin := r.Context().Value(UserLoginKey).(string)
+	userLogin, ok := r.Context().Value(UserLoginKey).(string)
+	if !ok {
+		logs.Error("failed to get value from context")
+		http.Error(w, "Forbidden", http.StatusForbidden)
+		return
+	}
 	groupId := r.URL.Query().Get("group_id")
 	member := r.URL.Query().Get("memberLogin")
-	if member == userLogin{
+	if member == userLogin {
 		http.Error(w, "you cant kick yourself", http.StatusBadRequest)
 		return
 	}
@@ -127,10 +170,15 @@ func (h *Handler) BanMember(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	json.NewEncoder(w).Encode("Done")
+	err = json.NewEncoder(w).Encode("Done")
+	if err != nil {
+		logs.Error("failed to encode JSON: %v", err)
+		http.Error(w, "Failed to encode JSON response", http.StatusInternalServerError)
+		return
+	}
 }
 
-// @Summary UnbanMember 
+// @Summary UnbanMember
 // @Tags blacklist
 // @Description Unban member in group
 // @Security BearerAuth
@@ -139,7 +187,12 @@ func (h *Handler) BanMember(w http.ResponseWriter, r *http.Request) {
 // @Param memberLogin query string true "login of member"
 // @Router /groups/unban [put]
 func (h *Handler) UnbanMember(w http.ResponseWriter, r *http.Request) {
-	userLogin := r.Context().Value(UserLoginKey).(string)
+	userLogin, ok := r.Context().Value(UserLoginKey).(string)
+	if !ok {
+		logs.Error("failed to get value from context")
+		http.Error(w, "Forbidden", http.StatusForbidden)
+		return
+	}
 	groupId := r.URL.Query().Get("group_id")
 	member := r.URL.Query().Get("memberLogin")
 	err := h.Group.UnbanMember(r.Context(), groupId, member, userLogin)
@@ -147,7 +200,12 @@ func (h *Handler) UnbanMember(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	json.NewEncoder(w).Encode("Done")
+	err = json.NewEncoder(w).Encode("Done")
+	if err != nil {
+		logs.Error("failed to encode JSON: %v", err)
+		http.Error(w, "Failed to encode JSON response", http.StatusInternalServerError)
+		return
+	}
 }
 
 // @Summary LeaveFromGroup
@@ -158,7 +216,12 @@ func (h *Handler) UnbanMember(w http.ResponseWriter, r *http.Request) {
 // @Param group_id query string true "id of group"
 // @Router /groups/leaveGroup [post]
 func (h *Handler) LeaveFromGroup(w http.ResponseWriter, r *http.Request) {
-	userLogin := r.Context().Value(UserLoginKey).(string)
+	userLogin, ok := r.Context().Value(UserLoginKey).(string)
+	if !ok {
+		logs.Error("failed to get value from context")
+		http.Error(w, "Forbidden", http.StatusForbidden)
+		return
+	}
 	groupId := r.URL.Query().Get("group_id")
 	err := h.Group.LeaveGroup(r.Context(), groupId, userLogin)
 	if err != nil {
@@ -167,7 +230,6 @@ func (h *Handler) LeaveFromGroup(w http.ResponseWriter, r *http.Request) {
 	}
 	w.WriteHeader(http.StatusAccepted)
 }
-
 
 // @Summary GiveLeaderRole
 // @Tags groups
@@ -178,7 +240,12 @@ func (h *Handler) LeaveFromGroup(w http.ResponseWriter, r *http.Request) {
 // @Param group_id query string true "id of group"
 // @Router /groups/givelead [put]
 func (h *Handler) ChangeLeader(w http.ResponseWriter, r *http.Request) {
-	userLogin := r.Context().Value(UserLoginKey).(string)
+	userLogin, ok := r.Context().Value(UserLoginKey).(string)
+	if !ok {
+		logs.Error("failed to get value from context")
+		http.Error(w, "Forbidden", http.StatusForbidden)
+		return
+	}
 	groupId := r.URL.Query().Get("group_id")
 	memberLogin := r.URL.Query().Get("user_login")
 	err := h.Group.GiveLeaderRole(r.Context(), groupId, userLogin, memberLogin)
@@ -189,7 +256,6 @@ func (h *Handler) ChangeLeader(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusAccepted)
 }
 
-
 // @Summary DeleteGroup
 // @Tags groups
 // @Description Delete group by id
@@ -198,7 +264,12 @@ func (h *Handler) ChangeLeader(w http.ResponseWriter, r *http.Request) {
 // @Param group_id query string true "id of group"
 // @Router /groups/delete [delete]
 func (h *Handler) DeleteGroup(w http.ResponseWriter, r *http.Request) {
-	userLogin := r.Context().Value(UserLoginKey).(string)
+	userLogin, ok := r.Context().Value(UserLoginKey).(string)
+	if !ok {
+		logs.Error("failed to get value from context")
+		http.Error(w, "Forbidden", http.StatusForbidden)
+		return
+	}
 	groupId := r.URL.Query().Get("group_id")
 	err := h.Group.DeleteGroup(r.Context(), groupId, userLogin)
 	if err != nil {
@@ -217,10 +288,15 @@ func (h *Handler) DeleteGroup(w http.ResponseWriter, r *http.Request) {
 // @Param user_login query string true "invited user"
 // @Router /groups/invite [post]
 func (h *Handler) Invite(w http.ResponseWriter, r *http.Request) {
-	userLogin := r.Context().Value(UserLoginKey).(string)
+	userLogin, ok := r.Context().Value(UserLoginKey).(string)
+	if !ok {
+		logs.Error("failed to get value from context")
+		http.Error(w, "Forbidden", http.StatusForbidden)
+		return
+	}
 	inviteDetails := models.CreateInvite{
 		GroupID: r.URL.Query().Get("group_id"),
-		User:   r.URL.Query().Get("user_login"),
+		User:    r.URL.Query().Get("user_login"),
 	}
 	if err := validate.Struct(inviteDetails); err != nil {
 		http.Error(w, "Validation failed: "+err.Error(), http.StatusBadRequest)
@@ -233,44 +309,68 @@ func (h *Handler) Invite(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode("Done")
+	err = json.NewEncoder(w).Encode("Done")
+	if err != nil {
+		logs.Error("failed to encode JSON: %v", err)
+		http.Error(w, "Failed to encode JSON response", http.StatusInternalServerError)
+		return
+	}
 }
 
-// @Summary Get invite list 
+// @Summary Get invite list
 // @Tags invites
 // @Description Get your list of invites
 // @Security BearerAuth
 // @Produce  json
 // @Router /groups/invitelist [get]
 func (h *Handler) GetInviteList(w http.ResponseWriter, r *http.Request) {
-	userLogin := r.Context().Value(UserLoginKey).(string)
+	userLogin, ok := r.Context().Value(UserLoginKey).(string)
+	if !ok {
+		logs.Error("failed to get value from context")
+		http.Error(w, "Forbidden", http.StatusForbidden)
+		return
+	}
 	invites, err := h.Group.GetInviteList(r.Context(), userLogin)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	if len(invites) == 0{
+	if len(invites) == 0 {
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode("Your current invitelist is empty")
-		return 
+		err = json.NewEncoder(w).Encode("Your current invitelist is empty")
+		if err != nil {
+			logs.Error("failed to encode JSON: %v", err)
+			http.Error(w, "Failed to encode JSON response", http.StatusInternalServerError)
+			return
+		}
+		return
 	}
 	response := map[string]interface{}{
 		"invites": invites,
 	}
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(response)
-	
+	err = json.NewEncoder(w).Encode(response)
+	if err != nil {
+		logs.Error("failed to encode JSON: %v", err)
+		http.Error(w, "Failed to encode JSON response", http.StatusInternalServerError)
+		return
+	}
 }
 
-// @Summary Decline invite 
+// @Summary Decline invite
 // @Tags invites
-// @Description Decline invite 
+// @Description Decline invite
 // @Security BearerAuth
 // @Produce  json
 // @Param invite_id query string true "Id of invite"
 // @Router /groups/declineinvite [post]
 func (h *Handler) DeclineInvite(w http.ResponseWriter, r *http.Request) {
-	userLogin := r.Context().Value(UserLoginKey).(string)
+	userLogin, ok := r.Context().Value(UserLoginKey).(string)
+	if !ok {
+		logs.Error("failed to get value from context")
+		http.Error(w, "Forbidden", http.StatusForbidden)
+		return
+	}
 	inviteID := r.URL.Query().Get("invite_id")
 	err := h.Group.DeclineInvite(r.Context(), userLogin, inviteID)
 	if err != nil {
@@ -278,8 +378,12 @@ func (h *Handler) DeclineInvite(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode("invite declined")
-	
+	err = json.NewEncoder(w).Encode("invite declined")
+	if err != nil {
+		logs.Error("failed to encode JSON: %v", err)
+		http.Error(w, "Failed to encode JSON response", http.StatusInternalServerError)
+		return
+	}
 }
 
 func (h *Handler) JoinGroup(w http.ResponseWriter, r *http.Request) {
@@ -289,7 +393,11 @@ func (h *Handler) JoinGroup(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode("Done")
+	err = json.NewEncoder(w).Encode("Done")
+	if err != nil {
+		logs.Error("failed to encode JSON: %v", err)
+		http.Error(w, "Failed to encode JSON response", http.StatusInternalServerError)
+		return
+	}
 }

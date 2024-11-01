@@ -3,9 +3,9 @@ package mongorepo
 import (
 	"JourneyPlanner/internal/models"
 	"context"
+	"fmt"
 
 	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
@@ -19,7 +19,10 @@ func NewMongoInviteRepo(db *mongo.Client) *MongoInviteRepo {
 
 func (r *MongoInviteRepo) AddInvitation(ctx context.Context, invite models.Invitation) error {
 	_, err := r.InviteColl.InsertOne(ctx, invite)
-	return err
+	if err != nil {
+		return fmt.Errorf("AddInvitation error: %v", err)
+	}
+	return nil
 }
 
 func (r *MongoInviteRepo) GetInvites(ctx context.Context, userLogin string) ([]models.Invitation, error) {
@@ -31,36 +34,38 @@ func (r *MongoInviteRepo) GetInvites(ctx context.Context, userLogin string) ([]m
 	}
 	cursor, err := r.InviteColl.Find(ctx, filter)
 	if err != nil {
-		logs.Errorf("getinvites Find() error: %v", err)
+		return nil, fmt.Errorf("getInvites error: %v", err)
 	}
 	var invites []models.Invitation
-	cursor.All(ctx, &invites)
+	err = cursor.All(ctx, &invites)
 	if err != nil {
-		logs.Errorf("getinvites All() error: %v", err)
-		return nil, err
+		return nil, fmt.Errorf("getinvites All(): %v", err)
 	}
 	return invites, nil
 }
 
-func (r *MongoInviteRepo) IsAlreadyInvited(ctx context.Context, groupOID primitive.ObjectID, userLogin string) bool{
+func (r *MongoInviteRepo) IsAlreadyInvited(ctx context.Context, groupID, userLogin string) (bool, error) {
+	oid, err := convertToObjectIDs(groupID)
+	if err != nil {
+		return false, fmt.Errorf("InvalidID: %v", err)
+	}
 	var invite models.Invitation
 	filter := bson.M{
 		"$and": []bson.M{
 			{"isUsed": false},
 			{"receiver": userLogin},
-			{"group_id": groupOID},
+			{"group_id": oid[0]},
 		},
 	}
-	err := r.InviteColl.FindOne(ctx, filter).Decode(&invite)
-	if err != nil{
-		if err == mongo.ErrNoDocuments{
-			return true
+	err = r.InviteColl.FindOne(ctx, filter).Decode(&invite)
+	if err != nil {
+		if err == mongo.ErrNoDocuments {
+			return true, nil
 		}
-		logs.Error(err)
+		return false, fmt.Errorf("isAlreadyInvites error: %v", err)
 	}
-	return false
-} 
-
+	return false, nil
+}
 
 func (r *MongoInviteRepo) DeleteInviteByToken(ctx context.Context, token string) error {
 	filter := bson.M{
@@ -72,16 +77,19 @@ func (r *MongoInviteRepo) DeleteInviteByToken(ctx context.Context, token string)
 	update := bson.M{"$set": bson.M{"isUsed": true}}
 	_, err := r.InviteColl.UpdateOne(ctx, filter, update)
 	if err != nil {
-		logs.Error("DeleteGroup error", err)
-		return err
+		return fmt.Errorf("DeleteGroup error: %v", err)
 	}
 	return nil
 }
 
-func (r *MongoInviteRepo) DeleteInviteByID(ctx context.Context, inviteID primitive.ObjectID, userLogin string) (int64, error) {
+func (r *MongoInviteRepo) DeleteInviteByID(ctx context.Context, inviteID, userLogin string) (int64, error) {
+	oid, err := convertToObjectIDs(inviteID)
+	if err != nil {
+		return 0, fmt.Errorf("InvalidID: %v", err)
+	}
 	filter := bson.M{
 		"$and": []bson.M{
-			{"_id": inviteID},
+			{"_id": oid[0]},
 			{"receiver": userLogin},
 			{"isUsed": false},
 		},
@@ -89,8 +97,7 @@ func (r *MongoInviteRepo) DeleteInviteByID(ctx context.Context, inviteID primiti
 	update := bson.M{"$set": bson.M{"isUsed": true}}
 	result, err := r.InviteColl.UpdateOne(ctx, filter, update)
 	if err != nil {
-		logs.Error("DeleteInviteByID error", err)
-		return 0, err
+		return 0, fmt.Errorf("DeleteInviteByID error: %v", err)
 	}
 	return result.ModifiedCount, nil
 }

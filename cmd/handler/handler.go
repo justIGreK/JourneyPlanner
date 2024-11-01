@@ -13,7 +13,7 @@ import (
 )
 
 type GroupService interface {
-	CreateGroup(ctx context.Context, groupName, userLogin string, invites []string) error
+	CreateGroup(ctx context.Context, groupName, userLogin string) error
 	GetGroupList(ctx context.Context, userLogin string) ([]models.GroupList, error)
 	GetGroupByID(ctx context.Context, groupID, userLogin string) (*models.Group, error)
 	LeaveGroup(ctx context.Context, groupID, userLogin string) error
@@ -53,20 +53,19 @@ type WsHandler interface {
 }
 
 type Handler struct {
-	Poll      PollService
-	Task      TaskService
-	User      UserService
-	Group     GroupService
+	Poll  PollService
+	Task  TaskService
+	User  UserService
+	Group GroupService
 }
 
 func NewHandler(pollService PollService, taskService TaskService,
 	userService UserService, groupService GroupService) *Handler {
 	return &Handler{
-		Poll:      pollService,
-		Task:      taskService,
-		User:      userService,
-		Group:     groupService,
-	
+		Poll:  pollService,
+		Task:  taskService,
+		User:  userService,
+		Group: groupService,
 	}
 }
 
@@ -74,13 +73,13 @@ func (h *Handler) InitRoutes(wsHandler WsHandler) *chi.Mux {
 	r := chi.NewRouter()
 	r.Get("/swagger/*", httpSwagger.WrapHandler)
 	r.Get("/join-group", h.JoinGroup)
-	r.Get("/ws", wsHandler.HandleConnections)	
 	r.Route("/auth", func(r chi.Router) {
 		r.Post("/singUp", h.SignUp)
 		r.Post("/signIn", h.SignIn)
 	})
 	r.Route("/groups", func(r chi.Router) {
 		r.Use(h.AuthMiddleware)
+		r.Get("/ws", wsHandler.HandleConnections)
 		r.Post("/add", h.AddGroup)
 		r.Get("/getlist", h.GetGroups)
 		r.Get("/getgroupinfo", h.GetGroupInfo)
