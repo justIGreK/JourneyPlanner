@@ -18,8 +18,6 @@ type Group struct {
 	Name        string             `json:"name" bson:"name"`
 	LeaderLogin string             `json:"leader_login" bson:"leader_login"`
 	Members     []string           `json:"members" bson:"members"`
-	Tasks       []Task             `json:"tasks" bson:"tasks"`
-	Polls       []Poll             `json:"polls" bson:"polls"`
 	IsActive    bool               `json:"-" bson:"isActive"`
 }
 
