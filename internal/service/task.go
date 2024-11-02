@@ -26,10 +26,17 @@ func NewTaskSrv(taskRepo TaskRepository, groupRepo GroupRepository) *TaskSrv {
 }
 
 func (s *TaskSrv) CreateTask(ctx context.Context, taskInfo models.CreateTask, userLogin string) error {
-	_, err := s.Group.GetGroup(ctx, taskInfo.GroupID, userLogin)
+	group, err := s.Group.GetGroup(ctx, taskInfo.GroupID, userLogin)
 	if err != nil {
 		logs.Error(err)
-		return errors.New("this group is not exist or you are not member of it")
+		return errors.New("failed to find group")
+	}
+	if group == nil{
+		return errors.New("group is not found, or you are not a member of it")
+	}
+	if group.LeaderLogin != userLogin {
+		logs.Error(err)
+		return errors.New("you have no permissions to do this")
 	}
 	dateTimeStr := fmt.Sprintf("%sT%s:00Z", taskInfo.StartTime.StartDate, taskInfo.StartTime.StartTime)
 
@@ -75,10 +82,13 @@ func doTasksOverlap(existingTask, newTask models.Task) bool {
 }
 
 func (s *TaskSrv) GetTaskList(ctx context.Context, groupID, userLogin string) ([]models.Task, error) {
-	_, err := s.Group.GetGroup(ctx, groupID, userLogin)
+	group, err := s.Group.GetGroup(ctx, groupID, userLogin)
 	if err != nil {
 		logs.Error(err)
-		return nil, errors.New("this group is not exist or you are not member of it")
+		return nil, errors.New("failed to find group")
+	}
+	if group == nil{
+		return nil, errors.New("group is not found, or you are not a member of it")
 	}
 	tasks, err := s.Task.GetTaskList(ctx, userLogin, groupID)
 	if err != nil {
@@ -94,9 +104,11 @@ func (s *TaskSrv) UpdateTask(ctx context.Context, taskID, userLogin string, upda
 	group, err := s.Group.GetGroup(ctx, updateTask.GroupID, userLogin)
 	if err != nil {
 		logs.Error(err)
-		return errors.New("this group is not exist or you are not member of it")
+		return errors.New("failed to find group")
 	}
-
+	if group == nil{
+		return errors.New("group is not found, or you are not a member of it")
+	}
 	if group.LeaderLogin != userLogin {
 		logs.Error(err)
 		return errors.New("you have no permissions to do this")
@@ -178,7 +190,10 @@ func (s *TaskSrv) DeleteTask(ctx context.Context, taskID, groupID, userLogin str
 	group, err := s.Group.GetGroup(ctx, groupID, userLogin)
 	if err != nil {
 		logs.Error(err)
-		return errors.New("this group is not exist or you are not member of it")
+		return errors.New("failed to find group")
+	}
+	if group == nil{
+		return errors.New("group is not found, or you are not a member of it")
 	}
 	if group.LeaderLogin != userLogin {
 		return errors.New("you have no permissions to do this")

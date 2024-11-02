@@ -47,8 +47,8 @@ func main() {
 	inviteRepo := mongorepo.NewMongoInviteRepo(dbclient)
 	blacklistRepo := mongorepo.NewMongoBlacklistRepo(dbclient)
 	chatRepo := mongorepo.NewChatRepository(dbclient)
+	
 	chatService := chat.NewChatService(chatRepo)
-
 	userSrv := service.NewUserSrv(userRepo)
 	pollSrv := service.NewPollSrv(pollRepo, groupRepo)
 	taskSrv := service.NewTaskSrv(taskRepo, groupRepo)

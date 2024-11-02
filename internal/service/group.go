@@ -67,8 +67,6 @@ func (s *GroupSrv) CreateGroup(ctx context.Context, groupName, userLogin string)
 		Name:        groupName,
 		LeaderLogin: userLogin,
 		Members:     []string{userLogin},
-		Tasks:       []models.Task{},
-		Polls:       []models.Poll{},
 		IsActive:    true,
 	}
 	groupOID, err := s.Group.CreateGroup(ctx, group)
@@ -112,6 +110,9 @@ func (s *GroupSrv) GetGroupByID(ctx context.Context, groupID, userLogin string) 
 		logs.Error(err)
 		return nil, errors.New("failed to get group")
 	}
+	if group == nil {
+		return nil, errors.New("group is not found, or you are not a member of it")
+	}
 	return group, nil
 }
 
@@ -120,6 +121,9 @@ func (s *GroupSrv) BanMember(ctx context.Context, groupID, memberLogin, userLogi
 	if err != nil {
 		logs.Error(err)
 		return errors.New("failed to ban user")
+	}
+	if group == nil {
+		return errors.New("group is not found, or you are not a member of it")
 	}
 	if group.LeaderLogin != userLogin {
 		return errors.New("you have no permissions to do this")
@@ -153,6 +157,9 @@ func (s *GroupSrv) UnbanMember(ctx context.Context, groupID, memberLogin, userLo
 		logs.Error(err)
 		return errors.New("failed to unban user")
 	}
+	if group == nil{
+		return errors.New("group is not found, or you are not a member of it")
+	}
 	if group.LeaderLogin != userLogin {
 		return errors.New("you have no permissions to do this")
 	}
@@ -185,6 +192,9 @@ func (s *GroupSrv) GetBlacklist(ctx context.Context, groupID, userLogin string) 
 		logs.Error(err)
 		return nil, errors.New("failed to get black list")
 	}
+	if group == nil{
+		return nil, errors.New("group is not found, or you are not a member of it")
+	}
 	if group.LeaderLogin != userLogin {
 		return nil, errors.New("you have no permissions to do this")
 	}
@@ -202,6 +212,9 @@ func (s *GroupSrv) LeaveGroup(ctx context.Context, groupID, userLogin string) er
 	if err != nil {
 		logs.Error(err)
 		return errors.New("failed to leave group")
+	}
+	if group == nil{
+		return errors.New("group is not found, or you are not a member of it")
 	}
 	if len(group.Members) <= 1 {
 		if err := s.Group.DeleteGroup(ctx, groupID); err != nil {
@@ -253,6 +266,9 @@ func (s *GroupSrv) GiveLeaderRole(ctx context.Context, groupID, userLogin, membe
 		logs.Error(err)
 		return errors.New("failed to get group")
 	}
+	if group == nil{
+		return errors.New("group is not found, or you are not a member of it")
+	}
 	if group.LeaderLogin != userLogin {
 		return errors.New("you have no permissions to do this")
 	}
@@ -280,6 +296,9 @@ func (s *GroupSrv) DeleteGroup(ctx context.Context, groupID, userLogin string) e
 		logs.Error(err)
 		return errors.New("Failed to find group")
 	}
+	if group == nil{
+		return errors.New("group is not found, or you are not a member of it")
+	}
 	if group.LeaderLogin != userLogin {
 		return errors.New("you have no permissions to do this")
 	}
@@ -295,6 +314,9 @@ func (s *GroupSrv) InviteUser(ctx context.Context, groupID, userLogin, invitedUs
 	group, err := s.Group.GetGroup(ctx, groupID, userLogin)
 	if err != nil {
 		logs.Error(err)
+		return errors.New("Failed to find group")
+	}
+	if group == nil{
 		return errors.New("group is not found, or you are not a member of it")
 	}
 
@@ -386,7 +408,7 @@ func (s *GroupSrv) JoinGroup(ctx context.Context, token string) error {
 		return errors.New("user was not found")
 	}
 	group, err := s.Group.GetGroup(ctx, inviteDetails.GroupID)
-	if group != nil {
+	if group == nil {
 		logs.Error(err)
 		return errors.New("this group is no longer exist")
 	}

@@ -27,10 +27,13 @@ func NewPollSrv(pollRepo PollRepository, groupRepo GroupRepository) *PollSrv {
 }
 
 func (s *PollSrv) CreatePoll(ctx context.Context, pollInfo models.CreatePoll, userLogin string) error {
-	_, err := s.Group.GetGroup(ctx, pollInfo.GroupID, userLogin)
+	group, err := s.Group.GetGroup(ctx, pollInfo.GroupID, userLogin)
 	if err != nil {
 		logs.Error(err)
-		return errors.New("this group is not exist or you are not member of it")
+		return errors.New("failed to find group")
+	}
+	if group == nil{
+		return errors.New("group is not found, or you are not a member of it")
 	}
 
 	now := time.Now().UTC()
@@ -55,10 +58,13 @@ func (s *PollSrv) CreatePoll(ctx context.Context, pollInfo models.CreatePoll, us
 }
 
 func (s *PollSrv) GetPollList(ctx context.Context, groupID, userLogin string) (*models.PollList, error) {
-	_, err := s.Group.GetGroup(ctx, groupID, userLogin)
+	group, err := s.Group.GetGroup(ctx, groupID, userLogin)
 	if err != nil {
 		logs.Error(err)
-		return nil, errors.New("this group is not exist or you are not member of it")
+		return nil, errors.New("failed to find group")
+	}
+	if group == nil{
+		return nil, errors.New("group is not found, or you are not a member of it")
 	}
 
 	openPolls, closedPolls, err := s.Poll.GetPollList(ctx, groupID)
@@ -106,8 +112,12 @@ func (s *PollSrv) DeletePollByID(ctx context.Context, pollID, groupID, userLogin
 	group, err := s.Group.GetGroup(ctx, groupID, userLogin)
 	if err != nil {
 		logs.Error(err)
-		return errors.New("this group is not exist or you are not member of it")
+		return errors.New("failed to find group")
 	}
+	if group == nil{
+		return errors.New("group is not found, or you are not a member of it")
+	}
+	
 	poll, err := s.Poll.GetPollById(ctx, pollID)
 	if err != nil {
 		logs.Error(err)
@@ -128,7 +138,10 @@ func (s *PollSrv) ClosePoll(ctx context.Context, pollID, groupID, userLogin stri
 	group, err := s.Group.GetGroup(ctx, groupID, userLogin)
 	if err != nil {
 		logs.Error(err)
-		return errors.New("this group is not exist or you are not member of it")
+		return errors.New("failed to find group")
+	}
+	if group == nil{
+		return errors.New("group is not found, or you are not a member of it")
 	}
 	poll, err := s.Poll.GetPollById(ctx, pollID)
 	if err != nil {
@@ -151,10 +164,13 @@ func (s *PollSrv) ClosePoll(ctx context.Context, pollID, groupID, userLogin stri
 }
 
 func (s *PollSrv) VotePoll(ctx context.Context, userLogin string, vote models.AddVote) error {
-	_, err := s.Group.GetGroup(ctx, vote.GroupID, userLogin)
+	group, err := s.Group.GetGroup(ctx, vote.GroupID, userLogin)
 	if err != nil {
 		logs.Error(err)
-		return errors.New("this group is not exist or you are not member of it")
+		return errors.New("failed to find group")
+	}
+	if group == nil{
+		return errors.New("group is not found, or you are not a member of it")
 	}
 	poll, err := s.Poll.GetPollById(ctx, vote.PollID)
 	if err != nil {

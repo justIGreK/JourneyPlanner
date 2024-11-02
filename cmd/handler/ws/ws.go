@@ -95,12 +95,16 @@ func (h *WebSocketHandler) HandleConnections(w http.ResponseWriter, r *http.Requ
 
 	messages, err := h.ChatService.GetChatHistory(r.Context(), msg.GroupID)
 	if err != nil {
+		fmt.Println("1")
 		err = ws.WriteMessage(websocket.TextMessage, []byte("error to loading history"))
 		if err != nil {
+			fmt.Println("2")
 			logs.Errorf("failed to write message: %v", err)
 		}
 	} else {
+		fmt.Println("3")
 		for _, msg := range messages {
+			fmt.Println("4")
 			message := fmt.Sprintf("%v: %v\t %v", msg.User, msg.Content, msg.Time.Format("2006-01-02 15:04:05"))
 			err = ws.WriteMessage(websocket.TextMessage, []byte(message))
 			if err != nil {

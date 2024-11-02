@@ -28,12 +28,8 @@ func (r *ChatRepo) InsertMessage(ctx context.Context, msg models.Message) error 
 }
 
 func (r *ChatRepo) FindMessagesByChatID(ctx context.Context, groupID string) ([]models.Message, error) {
-	oid, err := convertToObjectIDs(groupID)
-	if err != nil {
-		return nil, fmt.Errorf("InvalidID: %v", err)
-	}
 	var messages []models.Message
-	cursor, err := r.ChatColl.Find(ctx, bson.M{"group_id": oid[0]})
+	cursor, err := r.ChatColl.Find(ctx, bson.M{"group_id": groupID})
 	if err != nil {
 		return nil, fmt.Errorf("FindMessagesByChatID error: %v", err)
 	}
